@@ -1,0 +1,13 @@
+<svg viewBox="0 0 360 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="leafGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#23950d"/>
+      <stop offset="100%" stop-color="#1b6f0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="360" height="120" fill="none" />
+  <path d="M80 80c0-18 25-38 50-38s50 20 50 38" fill="none" stroke="#23950d" stroke-width="11" stroke-linecap="round"/>
+  <path d="M210 42c0-4 17-35 34-23 17 12-4 42-18 49-13 7-16-18-16-26z" fill="url(#leafGradient)"/>
+  <path d="M235 14c8 10 14 20 12 33-1 12-17 20-26 15-12-6-12-25-3-38 4-6 11-10 17-10z" fill="url(#leafGradient)"/>
+  <text x="40" y="95" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="700" fill="#1f4516">GRANJERO</text>
+</svg>
