@@ -88,9 +88,16 @@ export default function RecursosHumanosPage() {
             </table>
           </div>
 
-          <div className="rounded-2xl bg-emerald-50 p-5 text-sm text-gray-700">
-            <p className="font-semibold text-emerald-700">Resumen</p>
-            <p className="mt-2">Actualmente hay 3 trabajadores registrados, con 2 activos y 1 inactivo.</p>
+          <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-gray-700">
+            <p className="font-semibold text-emerald-700">Roles disponibles</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {['ADMINISTRADOR', 'ENCARGADO TIENDA', 'VENDEDOR', 'BODEGA', 'ENVASADO'].map((rol) => (
+                <span key={rol} className="rounded-full bg-white px-3 py-1.5 font-medium text-emerald-700 shadow-sm">
+                  {rol}
+                </span>
+              ))}
+            </div>
+            <p className="mt-3">Actualmente hay 3 trabajadores registrados, con 2 activos y 1 inactivo.</p>
           </div>
         </section>
       </main>
