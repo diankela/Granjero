@@ -1,6 +1,39 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { trabajadores } from "../data";
+
+type TrabajadorDetalle = {
+  rut: string;
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  correo: string;
+  direccion: string;
+  rol: string;
+  tienda: string;
+  estado: string;
+};
+
+async function getTrabajador(rut: string): Promise<TrabajadorDetalle | null> {
+  try {
+    const response = await fetch(`http://localhost:3000/api/trabajadores`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const result = await response.json();
+
+    if (!result?.data) {
+      return null;
+    }
+
+    return result.data.find((item: TrabajadorDetalle) => item.rut === rut) ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export default async function TrabajadorDetallePage({
   params,
@@ -8,7 +41,7 @@ export default async function TrabajadorDetallePage({
   params: Promise<{ rut: string }>;
 }) {
   const { rut } = await params;
-  const trabajador = trabajadores.find((item) => item.rut === rut);
+  const trabajador = await getTrabajador(rut);
 
   if (!trabajador) {
     notFound();
@@ -38,15 +71,23 @@ export default async function TrabajadorDetallePage({
                   Consulta la información personal y laboral del trabajador seleccionado.
                 </p>
               </div>
-              <span
-                className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                  trabajador.estado === "Activo"
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-amber-100 text-amber-700"
-                }`}
-              >
-                {trabajador.estado}
-              </span>
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href={`/recursos-humanos/editar/${trabajador.rut}`}
+                  className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                >
+                  Editar
+                </Link>
+                <span
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                    trabajador.estado === "Activo"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  {trabajador.estado}
+                </span>
+              </div>
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2">
@@ -88,7 +129,7 @@ export default async function TrabajadorDetallePage({
                     <span>{trabajador.rol}</span>
                   </div>
                   <div className="flex justify-between gap-4 border-b border-emerald-200 pb-2">
-                    <span className="font-medium text-emerald-700">Tienda asignada</span>
+                    <span className="font-medium text-emerald-700">Asignación</span>
                     <span>{trabajador.tienda}</span>
                   </div>
                   <div className="flex justify-between gap-4">

@@ -1,35 +1,47 @@
-export const trabajadores = [
+export type Trabajador = {
+  rut: string;
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  correo: string;
+  direccion: string;
+  rol: string;
+  tienda: string;
+  estado: "Activo" | "Inactivo";
+};
+
+export const trabajadores: Trabajador[] = [
   {
-    rut: "159334244",
+    rut: "156730824",
     nombre: "Juan",
     apellido: "Pérez",
-    telefono: "60577390",
+    telefono: "987654321",
     correo: "juan.perez@granjero.cl",
-    direccion: "Av. Los Robles 125, Santiago",
-    rol: "BODEGA",
-    tienda: "Bodega Central",
+    direccion: "Av. Principal 123",
+    rol: "ADMINISTRADOR",
+    tienda: "Sin asignación",
+    estado: "Activo",
+  },
+  {
+    rut: "176543218",
+    nombre: "María",
+    apellido: "González",
+    telefono: "912345678",
+    correo: "maria.gonzalez@granjero.cl",
+    direccion: "Calle Los Olivos 45",
+    rol: "VENDEDOR",
+    tienda: "La Concepción",
     estado: "Activo",
   },
   {
     rut: "198765432",
-    nombre: "Ana",
-    apellido: "Soto",
-    telefono: "987654321",
-    correo: "ana.soto@granjero.cl",
-    direccion: "Calle Bilbao 45, Concepción",
-    rol: "VENDEDOR",
-    tienda: "Bilbao",
-    estado: "Activo",
-  },
-  {
-    rut: "205551234",
     nombre: "Carlos",
     apellido: "Muñoz",
-    telefono: "912345678",
+    telefono: "934567890",
     correo: "carlos.munoz@granjero.cl",
-    direccion: "Pasaje Providencia 78, Santiago",
-    rol: "ADMINISTRADOR",
-    tienda: "La Concepción",
+    direccion: "Ruta 5 Norte 789",
+    rol: "ENCARGADO_TIENDA",
+    tienda: "Bilbao",
     estado: "Inactivo",
   },
 ];

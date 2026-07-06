@@ -17,6 +17,18 @@ export default function BodegaPage() {
               <li>Monitorear productividad del equipo.</li>
             </ul>
           </div>
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            <Link href="/envasado" className="rounded-2xl border border-green-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+              <h2 className="mb-2 text-lg font-semibold text-green-700">Envasado</h2>
+              <p className="text-sm text-gray-600">Gestiona tareas, asignaciones y avance del proceso de envasado.</p>
+            </Link>
+            <Link href="/inventario" className="rounded-2xl border border-green-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+              <h2 className="mb-2 text-lg font-semibold text-green-700">Inventario</h2>
+              <p className="text-sm text-gray-600">Controla stock y movimientos de productos en bodega.</p>
+            </Link>
+          </div>
+
           <Link href="/dashboard" className="mt-8 inline-flex rounded-full bg-green-500 px-6 py-3 text-white transition hover:bg-green-600">
             Volver al Panel
           </Link>

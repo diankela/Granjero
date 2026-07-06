@@ -30,25 +30,11 @@ const features = [
       "Gestiona el flujo de productos, almacena información y coordina los movimientos internos.",
   },
   {
-    icon: "🧴",
-    title: "Envasado",
-    href: "/envasado",
-    description:
-      "Monitorea productividad de tu equipo, mantén registros de actividades.",
-  },
-  {
-    icon: "📦",
-    title: "Inventario",
-    href: "/inventario",
-    description:
-      "Controla el inventario de productos y otros recursos necesarios.",
-  },
-  {
     icon: "👨‍🌾",
     title: "Recursos Humanos",
     href: "/recursos-humanos",
     description:
-      "Gestiona el personal, asigna tareas y controla la productividad del equipo.",
+      "Administra el personal, roles, asignaciones y estado de los trabajadores.",
   },
 ];
 
