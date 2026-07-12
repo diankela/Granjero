@@ -123,3 +123,55 @@ export async function PUT(
     );
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ rut: string }> }
+) {
+  try {
+    const { rut } = await context.params;
+
+    if (!rut) {
+      return NextResponse.json(
+        { ok: false, error: "El RUT es obligatorio." },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createSupabaseServerClient();
+
+    const { data, error } = await supabase
+      .from("usuario")
+      .update({
+        eliminado: true,
+        activo: "N",
+      })
+      .eq("rut", rut)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      message: "Trabajador eliminado correctamente.",
+      data,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Error al eliminar trabajador.",
+      },
+      { status: 500 }
+    );
+  }
+}

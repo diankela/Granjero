@@ -25,6 +25,7 @@ export async function GET() {
           nombre
         )
       `)
+      .eq("eliminado", false)
       .order("id_usuario", { ascending: true });
 
     if (error) {
@@ -126,6 +127,64 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const { data: trabajadoresExistentes, error: buscarError } = await supabase
+      .from("usuario")
+      .select("id_usuario, rut, correo, eliminado")
+      .or(`rut.eq.${rut},correo.eq.${correo}`);
+
+    if (buscarError) {
+      return NextResponse.json(
+        { error: buscarError.message },
+        { status: 400 }
+      );
+    }
+
+    const trabajadorExistente = trabajadoresExistentes?.[0];
+
+    if (trabajadorExistente && trabajadorExistente.eliminado === false) {
+      return NextResponse.json(
+        { error: "El trabajador ya existe en Recursos Humanos." },
+        { status: 400 }
+      );
+    }
+
+    if (trabajadorExistente && trabajadorExistente.eliminado === true) {
+      const { data, error } = await supabase
+        .from("usuario")
+        .update({
+          rut,
+          nombre,
+          apellido,
+          telefono,
+          correo,
+          direccion: direccion || null,
+          rol,
+          activo,
+          tiendas_id_tienda,
+          eliminado: false,
+        })
+        .eq("id_usuario", trabajadorExistente.id_usuario)
+        .select()
+        .single();
+
+      if (error) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Trabajador restaurado correctamente",
+          data,
+        },
+        { status: 200 }
+      );
+    }
+
 
     const { data, error } = await supabase
       .from("usuario")

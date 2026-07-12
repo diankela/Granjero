@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+
 type TrabajadorListItem = {
   id_usuario?: number;
   rut: string;
@@ -19,6 +20,16 @@ export default function RecursosHumanosPage() {
   const [trabajadores, setTrabajadores] = useState<TrabajadorListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+
+  const [correoInvitacion, setCorreoInvitacion] = useState("");
+  const [enviandoInvitacion, setEnviandoInvitacion] = useState(false);
+  const [mensajeInvitacion, setMensajeInvitacion] = useState("");
+  const [errorInvitacion, setErrorInvitacion] = useState("");
+
+  const [trabajadorAEliminar, setTrabajadorAEliminar] = useState<{
+  rut: string;
+  nombre: string;
+} | null>(null);
 
   useEffect(() => {
     const fetchTrabajadores = async () => {
@@ -77,6 +88,80 @@ export default function RecursosHumanosPage() {
       setTogglingId(null);
     }
   };
+
+  async function enviarInvitacion(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setMensajeInvitacion("");
+    setErrorInvitacion("");
+
+    if (!correoInvitacion.trim()) {
+      setErrorInvitacion("Debes ingresar un correo.");
+      return;
+    }
+
+    try {
+      setEnviandoInvitacion(true);
+
+      const response = await fetch("/api/trabajadores/invitar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          correo: correoInvitacion.trim().toLowerCase(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Error al enviar la invitación.");
+      }
+
+      setMensajeInvitacion("Invitación enviada correctamente.");
+      setCorreoInvitacion("");
+    } catch (error) {
+        const mensajeError =
+          error instanceof Error ? error.message : "Error al enviar la invitación.";
+
+        if (mensajeError.includes("email rate limit exceeded")) {
+          setErrorInvitacion(
+            "Supabase alcanzó el límite temporal de envío de correos. Intenta nuevamente más tarde o configura un servicio SMTP para producción."
+          );
+        } else {
+          setErrorInvitacion(mensajeError);
+        }
+    } finally {
+      setEnviandoInvitacion(false);
+    }
+  }
+
+  async function eliminarTrabajador(rut: string) {
+  try {
+    const response = await fetch(`/api/trabajadores/${rut}`, {
+      method: "DELETE",
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Error al eliminar trabajador.");
+    }
+
+    setTrabajadores((prev) =>
+      prev.filter((trabajador) => trabajador.rut !== rut)
+    );
+
+    setTrabajadorAEliminar(null);
+  } catch (error) {
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Error al eliminar trabajador."
+    );
+  }
+}
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] text-gray-800">
@@ -153,7 +238,9 @@ export default function RecursosHumanosPage() {
                               trabajador.estado === "Activo" ? "translate-x-5" : "translate-x-0"
                             }`}
                           />
+                          
                         </button>
+                        
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -164,6 +251,21 @@ export default function RecursosHumanosPage() {
                         >
                           Editar
                         </Link>
+
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTrabajadorAEliminar({
+                              rut: trabajador.rut,
+                              nombre: `${trabajador.nombre} ${trabajador.apellido}`,
+                            })
+                          }
+                          className="rounded-full bg-red-100 px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-200"
+                        >
+                          Eliminar
+                        </button>
+
                         <Link
                           href={`/recursos-humanos/${trabajador.rut}`}
                           className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-200"
@@ -191,7 +293,101 @@ export default function RecursosHumanosPage() {
             <p className="mt-3">Actualmente hay 3 trabajadores registrados, con 2 activos y 1 inactivo.</p>
           </div>
         </section>
+
+        <br>
+        </br>
+
+
+        <section className="mb-8 rounded-2xl border border-emerald-100 bg-emerald-50 p-6">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-emerald-800">
+              Invitar acceso al sistema
+            </h2>
+
+            <p className="mt-2 text-gray-600">
+              Envía una invitación a un trabajador registrado para que pueda crear su contraseña e ingresar al sistema.
+            </p>
+          </div>
+
+          <form onSubmit={enviarInvitacion} className="flex flex-col gap-4 md:flex-row md:items-end">
+            <div className="flex-1">
+              <label
+                htmlFor="correoInvitacion"
+                className="mb-2 block font-medium text-gray-700"
+              >
+                Correo del trabajador
+              </label>
+
+              <input
+                id="correoInvitacion"
+                type="email"
+                value={correoInvitacion}
+                onChange={(event) => setCorreoInvitacion(event.target.value)}
+                placeholder="trabajador@granjero.cl"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={enviandoInvitacion}
+              className="rounded-full bg-emerald-500 px-8 py-3 font-bold text-white transition hover:bg-emerald-600 disabled:opacity-60"
+            >
+              {enviandoInvitacion ? "Enviando..." : "Enviar invitación"}
+            </button>
+          </form>
+
+          {mensajeInvitacion ? (
+            <p className="mt-4 rounded-xl bg-emerald-100 px-4 py-3 text-emerald-700">
+              {mensajeInvitacion}
+            </p>
+          ) : null}
+
+          {errorInvitacion ? (
+            <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-red-600">
+              {errorInvitacion}
+            </p>
+          ) : null}
+        </section>
+
       </main>
+      {trabajadorAEliminar ? (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-gray-800">
+          Eliminar trabajador
+        </h2>
+
+        <p className="mt-3 text-sm leading-6 text-gray-600">
+          ¿Seguro que deseas eliminar a{" "}
+          <span className="font-semibold text-gray-800">
+            {trabajadorAEliminar.nombre}
+          </span>
+          ? Esta acción lo ocultará de la lista y quedará inactivo.
+        </p>
+      </div>
+
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => setTrabajadorAEliminar(null)}
+          className="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          onClick={() => eliminarTrabajador(trabajadorAEliminar.rut)}
+          className="rounded-full bg-red-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
+        >
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+) : null}
     </div>
   );
 }

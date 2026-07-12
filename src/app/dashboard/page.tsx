@@ -182,7 +182,7 @@ export default function DashboardPage() {
             <Link
               key={feature.title}
               href={feature.href}
-              className="box2-glass group rounded-2xl border border-white/50 bg-white/50 p-6 shadow-[0_8px_30px_rgba(15,23,42,0.10)] backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-[0_12px_35px_rgba(15,23,42,0.16)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green-300"
+              className="group rounded-2xl border border-white/50 bg-white/50 p-6 shadow-[0_8px_30px_rgba(15,23,42,0.10)] backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-[0_12px_35px_rgba(15,23,42,0.16)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green-300"
             >
               <div className="mb-4 text-4xl">{feature.icon}</div>
               <h3 className="mb-2 text-xl font-semibold text-black-600">{feature.title}</h3>

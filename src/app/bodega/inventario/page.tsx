@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Producto = {
@@ -24,6 +25,7 @@ const initialForm = {
 };
 
 export default function ProductosPage() {
+  const router = useRouter();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [form, setForm] = useState(initialForm);
   const [cargando, setCargando] = useState(true);
@@ -122,6 +124,13 @@ export default function ProductosPage() {
   return (
     <main className="min-h-screen bg-gray-100 px-8 py-10">
       <section className="mx-auto max-w-7xl rounded-3xl bg-white p-10 shadow-sm">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="mb-6 inline-flex items-center rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+        >
+          ← Volver
+        </button>
         <p className="mb-2 text-sm font-bold uppercase tracking-[0.3em] text-emerald-600">
           Productos
         </p>
