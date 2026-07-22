@@ -7,35 +7,30 @@ import { supabase } from "@/lib/supabase";
 
 const features = [
   {
-    icon: "🛍️",
     title: "Tiendas",
     href: "/tiendas",
     description:
       "Gestiona todos tiendas, monitorea su crecimiento y organizalas.",
   },
   {
-    icon: "🧾",
     title: "Compras",
     href: "/compras",
     description:
       "Control de compras. Optimiza los recursos.",
   },
   {
-    icon: "📋",
     title: "Despacho",
     href: "/despacho",
     description:
       "Visualiza reportes detallados sobre las entregas a cada tienda.",
   },
   {
-    icon: "🏭",
     title: "Bodega",
     href: "/bodega",
     description:
       "Gestiona el flujo de productos, almacena información y coordina los movimientos internos.",
   },
   {
-    icon: "👨‍🌾",
     title: "Recursos Humanos",
     href: "/recursos-humanos",
     description:
@@ -93,6 +88,16 @@ export default function DashboardPage() {
           return;
         }
 
+        if (result.data.rol === "VENDEDOR") {
+          router.push("/pedidos-tienda");
+          return;
+        }
+
+        if (result.data.rol !== "ADMINISTRADOR") {
+          await supabase.auth.signOut();
+          router.push("/login");
+          return;
+        }
         setUsuario(result.data);
       } catch (error) {
         console.error(error);
@@ -184,7 +189,7 @@ export default function DashboardPage() {
               href={feature.href}
               className="group rounded-2xl border border-white/50 bg-white/50 p-6 shadow-[0_8px_30px_rgba(15,23,42,0.10)] backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-[0_12px_35px_rgba(15,23,42,0.16)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green-300"
             >
-              <div className="mb-4 text-4xl">{feature.icon}</div>
+              {/* <div className="mb-4 text-4xl">{feature.icon}</div> */}
               <h3 className="mb-2 text-xl font-semibold text-black-600">{feature.title}</h3>
               <p className="text-sm leading-6 text-gray-600">{feature.description}</p>
               <p className="mt-6 text-sm font-semibold text-gray-700 transition group-hover:text-gray-900">

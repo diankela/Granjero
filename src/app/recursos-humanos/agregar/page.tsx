@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type Rol = {
+  id_rol: number;
+  nombre: string;
+  activo: string;
+};
+
 type FormValues = {
   rut: string;
   nombre: string;
@@ -30,6 +36,8 @@ const initialValues: FormValues = {
 };
 
 export default function AgregarTrabajadorPage() {
+  const [roles, setRoles] = useState<Rol[]>([]);
+  const [cargandoRoles, setCargandoRoles] = useState(true);
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitMessage, setSubmitMessage] = useState("");
@@ -40,6 +48,10 @@ export default function AgregarTrabajadorPage() {
     type: "success",
     message: "",
   });
+  const [mostrarNuevoRol, setMostrarNuevoRol] = useState(false);
+  const [nuevoRol, setNuevoRol] = useState("");
+  const [guardandoRol, setGuardandoRol] = useState(false);
+  const [errorRol, setErrorRol] = useState("");
 
   const handleChange = (field: keyof FormValues, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -67,6 +79,10 @@ export default function AgregarTrabajadorPage() {
     };
 
     fetchExistingUsers();
+  }, []);
+
+  useEffect(() => {
+    cargarRoles();
   }, []);
 
   useEffect(() => {
@@ -186,6 +202,69 @@ export default function AgregarTrabajadorPage() {
     }
   };
 
+  async function cargarRoles() {
+  try {
+    setCargandoRoles(true);
+
+    const response = await fetch("/api/roles");
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Error al cargar roles.");
+    }
+
+    setRoles(result.data || []);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setCargandoRoles(false);
+  }
+}
+
+async function guardarNuevoRol() {
+  setErrorRol("");
+
+  const nombreRol = nuevoRol.trim().toUpperCase().replaceAll(" ", "_");
+
+  if (!nombreRol) {
+    setErrorRol("Debes ingresar un nombre para el rol.");
+    return;
+  }
+
+  try {
+    setGuardandoRol(true);
+
+    const response = await fetch("/api/roles", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        nombre: nombreRol,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Error al crear el rol.");
+    }
+
+    setRoles((prev) => [...prev, result.data]);
+    handleChange("rol", result.data.nombre);
+    setNuevoRol("");
+    setMostrarNuevoRol(false);
+  } catch (error) {
+    setErrorRol(
+      error instanceof Error
+        ? error.message
+        : "Error al crear el rol."
+    );
+  } finally {
+    setGuardandoRol(false);
+  }
+}
+
   return (
     <div className="min-h-screen bg-[#f5f5f5] text-gray-800">
       <main className="mx-auto max-w-5xl px-5 py-10">
@@ -285,20 +364,96 @@ export default function AgregarTrabajadorPage() {
               <h2 className="mb-4 text-xl font-semibold text-emerald-800">Datos laborales</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Rol</label>
+                  <label
+                    htmlFor="rol"
+                    className="mb-1 block text-sm font-medium text-gray-700"
+                  >
+                    Rol
+                  </label>
+
                   <select
+                    id="rol"
                     value={values.rol}
                     onChange={(event) => handleChange("rol", event.target.value)}
-                    className={`w-full rounded-xl border bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500 ${errors.rol ? "border-red-400" : "border-gray-300"}`}
+                    disabled={cargandoRoles}
+                    className={`w-full rounded-xl border bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500 disabled:bg-gray-100 ${
+                      errors.rol ? "border-red-400" : "border-gray-300"
+                    }`}
                   >
-                    <option value="">Selecciona un rol</option>
-                    <option value="ADMINISTRADOR">Administrador</option>
-                    <option value="ENCARGADO_TIENDA">Encargado de Tienda</option>
-                    <option value="VENDEDOR">Vendedor</option>
-                    <option value="BODEGA">Bodega</option>
-                    <option value="ENVASADO">Envasado</option>
+                    <option value="">
+                      {cargandoRoles ? "Cargando roles..." : "Selecciona un rol"}
+                    </option>
+
+                    {roles.map((rol) => (
+                      <option key={rol.id_rol} value={rol.nombre}>
+                        {rol.nombre.replaceAll("_", " ")}
+                      </option>
+                    ))}
                   </select>
-                  {errors.rol ? <p className="mt-1 text-sm text-red-500">{errors.rol}</p> : null}
+
+                  {errors.rol ? (
+                    <p className="mt-1 text-sm text-red-500">{errors.rol}</p>
+                  ) : null}
+
+                  <div className="mt-3">
+  {!mostrarNuevoRol ? (
+    <button
+      type="button"
+      onClick={() => {
+        setMostrarNuevoRol(true);
+        setErrorRol("");
+      }}
+      className="text-sm font-semibold text-emerald-700 transition hover:text-emerald-900"
+    >
+      + Agregar nuevo rol
+    </button>
+  ) : (
+    <div className="rounded-xl border border-emerald-200 bg-white p-4">
+      <label className="mb-2 block text-sm font-medium text-gray-700">
+        Nuevo rol
+      </label>
+
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <input
+          type="text"
+          value={nuevoRol}
+          onChange={(event) => setNuevoRol(event.target.value)}
+          placeholder="Ej: Supervisor bodega"
+          className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+        />
+
+        <button
+          type="button"
+          onClick={guardarNuevoRol}
+          disabled={guardandoRol}
+          className="rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:bg-emerald-300"
+        >
+          {guardandoRol ? "Guardando..." : "Guardar rol"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMostrarNuevoRol(false);
+            setNuevoRol("");
+            setErrorRol("");
+          }}
+          className="rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+        >
+          Cancelar
+        </button>
+      </div>
+
+      {errorRol ? (
+        <p className="mt-2 text-sm text-red-500">{errorRol}</p>
+      ) : null}
+
+      <p className="mt-2 text-xs text-gray-500">
+        El rol se guardará en mayúsculas y quedará disponible para futuros trabajadores.
+      </p>
+    </div>
+  )}
+</div>
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Asignación</label>

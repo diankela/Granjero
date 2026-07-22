@@ -19,6 +19,7 @@ export async function POST(request: Request) {
       .from("usuario")
       .select(`
         id_usuario,
+        tiendas_id_tienda,
         rut,
         nombre,
         apellido,
@@ -39,13 +40,6 @@ export async function POST(request: Request) {
     if (data.activo !== "S") {
       return NextResponse.json(
         { ok: false, error: "El usuario se encuentra inactivo." },
-        { status: 403 }
-      );
-    }
-
-    if (data.rol !== "ADMINISTRADOR") {
-      return NextResponse.json(
-        { ok: false, error: "No tienes permisos de administrador." },
         { status: 403 }
       );
     }

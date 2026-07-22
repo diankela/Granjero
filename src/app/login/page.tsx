@@ -50,7 +50,18 @@ async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
       throw new Error(perfilResult.error || "No tienes acceso al sistema.");
     }
 
-    router.push("/dashboard");
+    const rolUsuario = perfilResult.data?.rol;
+
+    if (rolUsuario === "VENDEDOR") {
+      router.push("/pedidos-tienda");
+      return;
+    }
+
+    if (rolUsuario === "ADMINISTRADOR") {
+      router.push("/dashboard");
+      return;
+    }
+
   } catch (error) {
     setError(
       error instanceof Error
