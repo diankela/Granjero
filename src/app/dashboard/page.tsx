@@ -89,7 +89,7 @@ export default function DashboardPage() {
         }
 
         if (result.data.rol === "VENDEDOR") {
-          router.push("/pedidos-tienda");
+          router.push("/bodega/pedidos-tienda");
           return;
         }
 

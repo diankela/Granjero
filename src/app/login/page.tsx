@@ -53,7 +53,7 @@ async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     const rolUsuario = perfilResult.data?.rol;
 
     if (rolUsuario === "VENDEDOR") {
-      router.push("/pedidos-tienda");
+      router.push("/bodega/pedidos-tienda");
       return;
     }
 

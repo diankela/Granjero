@@ -5,7 +5,7 @@ export default function BodegaPage() {
     <div className="min-h-screen bg-[#f5f5f5] text-gray-800">
       <main className="mx-auto max-w-4xl px-5 py-10">
         <section className="rounded-3xl border border-white/40 bg-white/60 p-8 shadow-[0_10px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
-          <h1 className="mb-4 text-4xl font-semibold text-indigo-600">Bodega</h1>
+          <h1 className="mb-4 text-4xl font-semibold text-black-600">Bodega</h1>
           <p className="mb-6 text-gray-700">
             Controla el inventario, coordina al equipo y supervisa el estado de los productos en la bodega.
           </p>
@@ -26,6 +26,39 @@ export default function BodegaPage() {
             <Link href="/bodega/inventario" className="rounded-2xl border border-green-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
               <h2 className="mb-2 text-lg font-semibold text-green-700">Inventario</h2>
               <p className="text-sm text-gray-600">Controla stock y movimientos de productos en bodega.</p>
+            </Link>
+            <Link
+              href="/bodega/pedidos-tienda"
+              className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+            >
+              <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">
+                Tiendas
+              </p>
+
+              <h3 className="text-xl font-bold text-gray-800">
+                Pedido desde tienda
+              </h3>
+
+              <p className="mt-3 text-sm leading-6 text-gray-600">
+                Vista para que los vendedores soliciten productos faltantes desde su tienda.
+              </p>
+            </Link>
+
+            <Link
+              href="/bodega/pedidos-reposicion"
+              className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+            >
+              <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">
+                Operaciones
+              </p>
+
+              <h3 className="text-xl font-bold text-gray-800">
+                Pedidos de reposición
+              </h3>
+
+              <p className="mt-3 text-sm leading-6 text-gray-600">
+                Revisa las solicitudes enviadas por las tiendas y gestiona la preparación de productos.
+              </p>
             </Link>
           </div>
 
