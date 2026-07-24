@@ -137,11 +137,29 @@ export async function POST(request: Request) {
         hora_pedido: horaPedido,
         grupo_pedido_id,
         enviado_por_rol: enviado_por_rol || null,
-        estado: "PENDIENTE",
+        estado: "NO_REVISADO",
       };
     });
 
     const supabase = createSupabaseServerClient();
+
+    const { error: grupoError } = await supabase
+      .from("pedidos_reposicion_grupos")
+      .insert({
+        grupo_pedido_id,
+        usuario_id_usuario,
+        tiendas_id_tienda,
+        fecha: fechaPedido,
+        hora_pedido: horaPedido,
+        estado: "NO_REVISADO",
+      });
+
+    if (grupoError) {
+      return NextResponse.json(
+        { ok: false, error: grupoError.message },
+        { status: 400 }
+      );
+    }
 
     const { data, error } = await supabase
       .from("pedidos_reposicion")
@@ -149,6 +167,11 @@ export async function POST(request: Request) {
       .select();
 
     if (error) {
+      await supabase
+        .from("pedidos_reposicion_grupos")
+        .delete()
+        .eq("grupo_pedido_id", grupo_pedido_id);
+
       return NextResponse.json(
         { ok: false, error: error.message },
         { status: 400 }

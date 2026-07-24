@@ -35,12 +35,34 @@ type Tienda = {
   nombre: string;
 };
 
+type ProductoPedidoEnviado = {
+  id_pedido: number;
+  producto_codigo: string;
+  producto_nombre: string;
+  producto_unidad: string;
+  cantidad: number;
+  estado: string;
+};
+
+type PedidoEnviado = {
+  grupo_pedido_id: string;
+  usuario_id_usuario: number;
+  tiendas_id_tienda: number;
+  fecha: string;
+  hora_pedido: string;
+  estado: string;
+  comentario_operador: string;
+  vendedor: string;
+  tienda: string;
+  productos: ProductoPedidoEnviado[];
+};
+
 export default function PedidosTiendaPage() {
   const router = useRouter();
 
   const [usuario, setUsuario] = useState<UsuarioPerfil | null>(null);
   const [cargando, setCargando] = useState(true);
-  
+
   const [productos, setProductos] = useState<ProductoLioren[]>([]);
   const [cargandoProductos, setCargandoProductos] = useState(true);
 
@@ -61,6 +83,9 @@ export default function PedidosTiendaPage() {
 
   const [productosLista, setProductosLista] = useState<ProductoEnLista[]>([]);
   const [horaLista, setHoraLista] = useState("");
+
+  const [pedidosEnviados, setPedidosEnviados] = useState<PedidoEnviado[]>([]);
+  const [cargandoPedidosEnviados, setCargandoPedidosEnviados] = useState(false);
 
   useEffect(() => {
     cargarTiendas();
@@ -112,6 +137,7 @@ export default function PedidosTiendaPage() {
         }
 
         setUsuario(result.data);
+        await cargarPedidosEnviados(result.data);
       } catch (error) {
         console.error(error);
         router.push("/login");
@@ -237,9 +263,9 @@ export default function PedidosTiendaPage() {
         return prev.map((item) =>
           item.producto_codigo === producto.codigo
             ? {
-                ...item,
-                cantidad: item.cantidad + Number(cantidad),
-              }
+              ...item,
+              cantidad: item.cantidad + Number(cantidad),
+            }
             : item
         );
       }
@@ -360,6 +386,40 @@ export default function PedidosTiendaPage() {
     }
   }
 
+
+  async function cargarPedidosEnviados(usuarioActual: UsuarioPerfil) {
+    try {
+      setCargandoPedidosEnviados(true);
+
+      const response = await fetch("/api/pedidos-reposicion/grupos");
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Error al cargar pedidos enviados.");
+      }
+
+      const pedidos = result.data || [];
+
+      const pedidosFiltrados =
+        usuarioActual.rol === "ADMINISTRADOR"
+          ? pedidos
+          : pedidos.filter(
+            (pedido: PedidoEnviado) =>
+              pedido.usuario_id_usuario === usuarioActual.id_usuario
+          );
+
+      setPedidosEnviados(pedidosFiltrados);
+    } catch (error) {
+      console.error(error);
+      setPedidosEnviados([]);
+    } finally {
+      setCargandoPedidosEnviados(false);
+    }
+  }
+
+
+
+
   return (
     <div className="min-h-screen bg-[#f5f5f5] text-gray-800">
       <header className="border-b border-gray-200 bg-white">
@@ -434,7 +494,7 @@ export default function PedidosTiendaPage() {
                   </p>
                 </div>
               ) : null}
-              
+
 
               <div className="md:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -613,6 +673,98 @@ export default function PedidosTiendaPage() {
               </button>
             </div>
           </form>
+          <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-5">
+              <h3 className="text-xl font-bold text-gray-800">
+                Mis pedidos enviados
+              </h3>
+
+              <p className="mt-2 text-sm text-gray-600">
+                Aquí puedes revisar el estado de tus solicitudes y los comentarios enviados por bodega.
+              </p>
+            </div>
+
+            {cargandoPedidosEnviados ? (
+              <p className="rounded-xl bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">
+                Cargando pedidos enviados...
+              </p>
+            ) : pedidosEnviados.length === 0 ? (
+              <p className="rounded-xl bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">
+                Aún no tienes pedidos enviados.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {pedidosEnviados.map((pedido) => (
+                  <div
+                    key={pedido.grupo_pedido_id}
+                    className="rounded-2xl border border-gray-200 bg-gray-50 p-5"
+                  >
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">
+                          Pedido #{pedido.grupo_pedido_id.slice(0, 8)}
+                        </p>
+
+                        <p className="mt-1 text-xs text-gray-500">
+                          {pedido.fecha} · {pedido.hora_pedido.slice(0, 5)} hrs · {pedido.tienda}
+                        </p>
+                      </div>
+
+                      <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        {pedido.estado.replaceAll("_", " ")}
+                      </span>
+                    </div>
+
+                    {pedido.comentario_operador ? (
+                      <div className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-gray-700">
+                        <span className="font-semibold text-emerald-700">
+                          Comentario de bodega:
+                        </span>{" "}
+                        {pedido.comentario_operador}
+                      </div>
+                    ) : (
+                      <div className="mb-4 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
+                        Aún no hay comentarios de bodega para este pedido.
+                      </div>
+                    )}
+
+                    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                      <table className="min-w-full text-left text-sm">
+                        <thead className="bg-emerald-50 text-emerald-800">
+                          <tr>
+                            <th className="px-4 py-3 font-semibold">Código</th>
+                            <th className="px-4 py-3 font-semibold">Producto</th>
+                            <th className="px-4 py-3 font-semibold">Cantidad</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {pedido.productos.map((producto) => (
+                            <tr
+                              key={producto.id_pedido}
+                              className="border-t border-gray-100"
+                            >
+                              <td className="px-4 py-3">
+                                {producto.producto_codigo}
+                              </td>
+
+                              <td className="px-4 py-3">
+                                {producto.producto_nombre}
+                              </td>
+
+                              <td className="px-4 py-3">
+                                {producto.cantidad} {producto.producto_unidad}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </section>
       </main>
     </div>
