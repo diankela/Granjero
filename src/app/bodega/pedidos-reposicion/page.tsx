@@ -49,6 +49,29 @@ type InfoTienda = {
   }[];
 };
 
+type ProductoEnvasado = {
+  id_producto: number;
+  codigo: string;
+  nombre: string;
+  unidad_medida: string;
+};
+
+type TrabajadorEnvasado = {
+  id_usuario: number;
+  nombre: string;
+  apellido: string;
+  rol: string;
+  activo?: string;
+  estado?: string;
+};
+
+const initialFormEnvasado = {
+  productos_id_producto: "",
+  usuario_id_usuario: "",
+  cantidad_objetivo: "",
+  observacion: "",
+};
+
 export default function PedidosReposicionOperacionesPage() {
   const router = useRouter();
 
@@ -61,6 +84,24 @@ export default function PedidosReposicionOperacionesPage() {
   const [comentariosEditados, setComentariosEditados] = useState<Record<string, string>>({});
   const [guardandoPedidoId, setGuardandoPedidoId] = useState<string | null>(null);
   const [mensajeActualizacion, setMensajeActualizacion] = useState("");
+
+  const [mostrarFormularioEnvasado, setMostrarFormularioEnvasado] =
+    useState(false);
+
+  const [productosEnvasado, setProductosEnvasado] = useState<ProductoEnvasado[]>(
+    []
+  );
+
+  const [trabajadoresEnvasado, setTrabajadoresEnvasado] = useState<
+    TrabajadorEnvasado[]
+  >([]);
+
+  const [formEnvasado, setFormEnvasado] = useState(initialFormEnvasado);
+
+  const [cargandoDatosEnvasado, setCargandoDatosEnvasado] = useState(false);
+  const [guardandoEnvasado, setGuardandoEnvasado] = useState(false);
+  const [mensajeEnvasado, setMensajeEnvasado] = useState("");
+  const [errorEnvasado, setErrorEnvasado] = useState("");
 
   const [seccionActiva, setSeccionActiva] = useState<
     "LA_CONCEPCION" | "BILBAO" | "PROVIDENCIA" | "BODEGA"
@@ -544,12 +585,161 @@ export default function PedidosReposicionOperacionesPage() {
     },
   };
 
+  async function cargarDatosEnvasado() {
+    try {
+      setCargandoDatosEnvasado(true);
+      setErrorEnvasado("");
+
+      const [productosRes, trabajadoresRes] = await Promise.all([
+        fetch("/api/productos"),
+        fetch("/api/trabajadores"),
+      ]);
+
+      const productosJson = await productosRes.json();
+      const trabajadoresJson = await trabajadoresRes.json();
+
+      if (!productosRes.ok) {
+        throw new Error(productosJson.error || "Error al cargar productos.");
+      }
+
+      if (!trabajadoresRes.ok) {
+        throw new Error(
+          trabajadoresJson.error || "Error al cargar trabajadores."
+        );
+      }
+
+      setProductosEnvasado(productosJson.data || []);
+
+      const soloEnvasadores = (trabajadoresJson.data || []).filter(
+        (trabajador: TrabajadorEnvasado) => trabajador.rol === "ENVASADO"
+      );
+
+      setTrabajadoresEnvasado(soloEnvasadores);
+    } catch (error) {
+      setErrorEnvasado(
+        error instanceof Error
+          ? error.message
+          : "Error al cargar datos de envasado."
+      );
+    } finally {
+      setCargandoDatosEnvasado(false);
+    }
+  }
+
+  async function alternarFormularioEnvasado() {
+    const nuevoEstado = !mostrarFormularioEnvasado;
+
+    setMostrarFormularioEnvasado(nuevoEstado);
+    setMensajeEnvasado("");
+    setErrorEnvasado("");
+
+    if (nuevoEstado && productosEnvasado.length === 0) {
+      await cargarDatosEnvasado();
+    }
+  }
+
+  function handleChangeEnvasado(
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) {
+    const { name, value } = event.target;
+
+    setFormEnvasado((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+
+  async function crearTareaEnvasado(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setErrorEnvasado("");
+    setMensajeEnvasado("");
+
+    if (!formEnvasado.productos_id_producto) {
+      setErrorEnvasado("Debes seleccionar un producto.");
+      return;
+    }
+
+    if (!formEnvasado.usuario_id_usuario) {
+      setErrorEnvasado("Debes seleccionar un trabajador de envasado.");
+      return;
+    }
+
+    if (
+      !formEnvasado.cantidad_objetivo ||
+      Number(formEnvasado.cantidad_objetivo) <= 0
+    ) {
+      setErrorEnvasado("El objetivo debe ser mayor a cero.");
+      return;
+    }
+
+    try {
+      setGuardandoEnvasado(true);
+
+      const response = await fetch("/api/envasado", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          productos_id_producto: Number(formEnvasado.productos_id_producto),
+          usuario_id_usuario: Number(formEnvasado.usuario_id_usuario),
+          cantidad_objetivo: Number(formEnvasado.cantidad_objetivo),
+          observacion: formEnvasado.observacion,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Error al crear tarea de envasado.");
+      }
+
+      setMensajeEnvasado("Tarea de envasado creada correctamente.");
+      setFormEnvasado(initialFormEnvasado);
+    } catch (error) {
+      setErrorEnvasado(
+        error instanceof Error
+          ? error.message
+          : "Error al crear tarea de envasado."
+      );
+    } finally {
+      setGuardandoEnvasado(false);
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   {/* ******************************Renderizado de la página**************************************** */ }
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] text-gray-800">
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
+
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">
               Operaciones
@@ -557,6 +747,7 @@ export default function PedidosReposicionOperacionesPage() {
             <h1 className="text-2xl font-bold text-emerald-700">
               Pedidos de reposición
             </h1>
+
           </div>
 
           <div className="flex items-center gap-4">
@@ -578,6 +769,14 @@ export default function PedidosReposicionOperacionesPage() {
       <main className="mx-auto max-w-7xl px-5 py-10">
         <section className="rounded-3xl border border-white/40 bg-white/80 p-8 shadow-[0_10px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
           <div className="mb-6">
+
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="mb-6 inline-flex items-center rounded-full border border-gray-300 px-8 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+            >
+              ← Volver
+            </button>
             <h2 className="text-3xl font-semibold text-gray-800">
               Solicitudes pendientes de tiendas
             </h2>
@@ -585,6 +784,171 @@ export default function PedidosReposicionOperacionesPage() {
               Aquí el jefe de operaciones puede revisar los productos faltantes solicitados por los vendedores.
             </p>
           </div>
+          <div className="mb-8 rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">
+                  Envasado
+                </p>
+
+                <h2 className="mt-2 text-2xl font-bold text-gray-800">
+                  Asignación de tareas de envasado
+                </h2>
+
+                <p className="mt-2 max-w-3xl text-sm text-gray-600">
+                  Crea tareas para el equipo de envasado. El objetivo debe registrarse en unidades de paquetes, no en gramos ni kilos.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={alternarFormularioEnvasado}
+                className="w-fit rounded-full bg-emerald-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-600"
+              >
+                {mostrarFormularioEnvasado
+                  ? "Ocultar formulario"
+                  : "Asignar tarea de envasado"}
+              </button>
+            </div>
+          </div>
+          {mostrarFormularioEnvasado ? (
+            <form
+              onSubmit={crearTareaEnvasado}
+              className="mb-8 grid gap-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-6 md:grid-cols-2"
+            >
+              <div>
+                <label className="mb-2 block font-medium text-gray-700">
+                  Producto a envasar
+                </label>
+
+                <select
+                  name="productos_id_producto"
+                  value={formEnvasado.productos_id_producto}
+                  onChange={handleChangeEnvasado}
+                  disabled={cargandoDatosEnvasado}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-emerald-500"
+                >
+                  <option value="">
+                    {cargandoDatosEnvasado
+                      ? "Cargando productos..."
+                      : "Selecciona un producto"}
+                  </option>
+
+                  {productosEnvasado.map((producto) => (
+                    <option key={producto.id_producto} value={producto.id_producto}>
+                      {producto.codigo} - {producto.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block font-medium text-gray-700">
+                  Envasador asignado
+                </label>
+
+                <select
+                  name="usuario_id_usuario"
+                  value={formEnvasado.usuario_id_usuario}
+                  onChange={handleChangeEnvasado}
+                  disabled={cargandoDatosEnvasado}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-emerald-500"
+                >
+                  <option value="">
+                    {cargandoDatosEnvasado
+                      ? "Cargando envasadores..."
+                      : "Selecciona un envasador"}
+                  </option>
+
+                  {trabajadoresEnvasado.map((trabajador) => (
+                    <option key={trabajador.id_usuario} value={trabajador.id_usuario}>
+                      {trabajador.nombre} {trabajador.apellido}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block font-medium text-gray-700">
+                  Objetivo en unidades
+                </label>
+
+                <input
+                  name="cantidad_objetivo"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={formEnvasado.cantidad_objetivo}
+                  onChange={handleChangeEnvasado}
+                  placeholder="Ej: 50 paquetes"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-emerald-500"
+                />
+
+                <p className="mt-2 text-xs text-gray-500">
+                  Registrar solo cantidad de paquetes, no gramos ni kilos.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block font-medium text-gray-700">
+                  Observación para envasado
+                </label>
+
+                <input
+                  name="observacion"
+                  value={formEnvasado.observacion}
+                  onChange={handleChangeEnvasado}
+                  placeholder="Ej: prioridad para despacho de hoy"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-emerald-500"
+                />
+
+                <p className="mt-2 text-xs text-gray-500">
+                  Esta observación será visible para administración y supervisión.
+                </p>
+              </div>
+
+              {errorEnvasado ? (
+                <p className="md:col-span-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                  {errorEnvasado}
+                </p>
+              ) : null}
+
+              {mensajeEnvasado ? (
+                <p className="md:col-span-2 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-700">
+                  {mensajeEnvasado}
+                </p>
+              ) : null}
+
+              <div className="md:col-span-2 flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="submit"
+                  disabled={guardandoEnvasado}
+                  className="w-fit rounded-full bg-emerald-500 px-8 py-3 font-bold text-white transition hover:bg-emerald-600 disabled:opacity-60"
+                >
+                  {guardandoEnvasado
+                    ? "Guardando tarea..."
+                    : "Crear tarea de envasado"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormEnvasado(initialFormEnvasado);
+                    setMensajeEnvasado("");
+                    setErrorEnvasado("");
+                    setMostrarFormularioEnvasado(false);
+                  }}
+                  className="w-fit rounded-full border border-gray-300 bg-white px-8 py-3 font-bold text-gray-600 transition hover:bg-gray-100"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          ) : null}
+
+
+
+
 
           {error ? (
             <p className="mb-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
@@ -670,12 +1034,24 @@ export default function PedidosReposicionOperacionesPage() {
                 <p className="rounded-xl bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">
                   Stock disponible pendiente de integrar con Lioren.
                 </p>
+
               </div>
             ) : null}
+
           </div>
 
+          <br /><br />
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="mb-6 inline-flex items-center rounded-full border border-gray-300 px-8 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+          >
+            ← Volver
+          </button>
         </section>
+
       </main>
+
     </div>
   );
 }

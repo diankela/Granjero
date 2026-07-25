@@ -352,6 +352,8 @@ export default function PedidosTiendaPage() {
       setFecha(fechaActual);
       setHoraLista("");
 
+      await cargarPedidosEnviados(usuario);
+
       if (usuario.rol === "ADMINISTRADOR") {
         setTiendaSeleccionada("");
       }
@@ -417,6 +419,19 @@ export default function PedidosTiendaPage() {
     }
   }
 
+  async function actualizarPedidosEnviados() {
+    if (!usuario) {
+      setErrorFormulario("No se pudo identificar al usuario.");
+      return;
+    }
+
+    await cargarPedidosEnviados(usuario);
+  }
+
+
+
+
+
 
 
 
@@ -424,6 +439,7 @@ export default function PedidosTiendaPage() {
     <div className="min-h-screen bg-[#f5f5f5] text-gray-800">
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">
               Vista vendedor
@@ -443,14 +459,30 @@ export default function PedidosTiendaPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-5 py-10">
+      <main className="mx-auto max-w-7xl px-5 py-10">
         <section className="rounded-3xl border border-white/40 bg-white/80 p-8 shadow-[0_10px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+
+
+          <div className="flex justify">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="mb-6 inline-flex items-center rounded-full border border-gray-300 px-8 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+            >
+              ← Volver
+            </button>
+          </div>
+
+
+
           <div className="mb-6">
             <p className="text-sm text-gray-600">Bienvenido/a</p>
             <h2 className="text-3xl font-semibold text-gray-800">
               {usuario?.nombre} {usuario?.apellido}
             </h2>
           </div>
+
+
 
           <form
             onSubmit={enviarPedido}
@@ -674,14 +706,25 @@ export default function PedidosTiendaPage() {
             </div>
           </form>
           <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="mb-5">
-              <h3 className="text-xl font-bold text-gray-800">
-                Mis pedidos enviados
-              </h3>
+            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">
+                  Mis pedidos enviados
+                </h3>
 
-              <p className="mt-2 text-sm text-gray-600">
-                Aquí puedes revisar el estado de tus solicitudes y los comentarios enviados por bodega.
-              </p>
+                <p className="mt-2 text-sm text-gray-600">
+                  Aquí puedes revisar el estado de tus solicitudes y los comentarios enviados por bodega.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={actualizarPedidosEnviados}
+                disabled={cargandoPedidosEnviados}
+                className="w-fit rounded-full border border-emerald-200 bg-white px-5 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-60"
+              >
+                {cargandoPedidosEnviados ? "Actualizando..." : "Actualizar pedidos"}
+              </button>
             </div>
 
             {cargandoPedidosEnviados ? (
@@ -764,8 +807,19 @@ export default function PedidosTiendaPage() {
                 ))}
               </div>
             )}
+            <br/>
+            <br/>
+            <button
+            type="button"
+            onClick={() => router.back()}
+            className="mb-6 inline-flex items-center rounded-full border border-gray-300 px-8 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+          >
+            ← Volver
+          </button>
           </section>
+          
         </section>
+        
       </main>
     </div>
   );

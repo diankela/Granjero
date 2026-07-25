@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 type Producto = {
   id_producto: number;
@@ -37,6 +38,16 @@ type TareaEnvasado = {
   finalizado_en: string | null;
 };
 
+type UsuarioPerfil = {
+  id_usuario: number;
+  tiendas_id_tienda?: number | null;
+  nombre: string;
+  apellido: string;
+  correo: string;
+  rol: string;
+  activo: string;
+};
+
 const initialForm = {
   productos_id_producto: "",
   usuario_id_usuario: "",
@@ -46,11 +57,11 @@ const initialForm = {
 
 const initialAvanceForm = {
   cantidad_agregada: "",
-  observacion: "",
 };
 
 export default function EnvasadoPage() {
   const router = useRouter();
+  const [usuario, setUsuario] = useState<UsuarioPerfil | null>(null);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
   const [tareas, setTareas] = useState<TareaEnvasado[]>([]);
@@ -66,6 +77,8 @@ export default function EnvasadoPage() {
 
   const [avanceForm, setAvanceForm] = useState(initialAvanceForm);
   const [registrandoAvance, setRegistrandoAvance] = useState(false);
+
+
 
   async function cargarDatos() {
     try {
@@ -111,8 +124,67 @@ export default function EnvasadoPage() {
   }
 
   useEffect(() => {
-    cargarDatos();
-  }, []);
+    async function iniciarVista() {
+      try {
+        if (!supabase) {
+          router.push("/login");
+          return;
+        }
+
+        const { data, error } = await supabase.auth.getUser();
+
+        if (error || !data.user?.email) {
+          router.push("/login");
+          return;
+        }
+
+        const response = await fetch("/api/auth/perfil", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            correo: data.user.email,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          await supabase.auth.signOut();
+          router.push("/login");
+          return;
+        }
+
+        const perfil = result.data as UsuarioPerfil;
+        const rol = perfil.rol;
+
+        if (rol === "VENDEDOR") {
+          router.push("/bodega/pedidos-tienda");
+          return;
+        }
+
+        if (rol === "OPERADOR" || rol === "JEFE_OPERACIONES") {
+          router.push("/bodega/pedidos-reposicion");
+          return;
+        }
+
+        if (rol !== "ENVASADO" && rol !== "ADMINISTRADOR") {
+          await supabase.auth.signOut();
+          router.push("/login");
+          return;
+        }
+
+        setUsuario(perfil);
+        await cargarDatos();
+      } catch (error) {
+        console.error(error);
+        router.push("/login");
+      }
+    }
+
+    iniciarVista();
+  }, [router]);
 
   function handleChange(
     event: React.ChangeEvent<
@@ -221,7 +293,6 @@ export default function EnvasadoPage() {
           envasado_id_envasado: tareaSeleccionada.id_envasado,
           usuario_id_usuario: tareaSeleccionada.usuario_id_usuario,
           cantidad_agregada: Number(avanceForm.cantidad_agregada),
-          observacion: avanceForm.observacion,
         }),
       });
 
@@ -263,105 +334,21 @@ export default function EnvasadoPage() {
           Control de envasado
         </h1>
 
-        <p className="mb-10 max-w-3xl text-lg text-gray-600">
-          Crea tareas de envasado, asigna trabajadores y controla el avance de
-          los productos preparados en bodega.
-        </p>
+        <div className="mb-10 rounded-2xl border border-emerald-100 bg-emerald-50 p-6">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">
+            Vista de avance
+          </p>
 
-        <form
-          onSubmit={handleSubmit}
-          className="mb-10 grid gap-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-6 md:grid-cols-2"
-        >
-          <div>
-            <label className="mb-2 block font-medium text-gray-700">
-              Producto
-            </label>
-            <select
-              name="productos_id_producto"
-              value={form.productos_id_producto}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-emerald-500"
-            >
-              <option value="">Selecciona un producto</option>
-              {productos.map((producto) => (
-                <option key={producto.id_producto} value={producto.id_producto}>
-                  {producto.codigo} - {producto.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
+          <h2 className="mt-2 text-2xl font-bold text-gray-800">
+            Tareas asignadas al área de envasado
+          </h2>
 
-          <div>
-            <label className="mb-2 block font-medium text-gray-700">
-              Trabajador
-            </label>
-            <select
-              name="usuario_id_usuario"
-              value={form.usuario_id_usuario}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-emerald-500"
-            >
-              <option value="">Selecciona un trabajador</option>
-              {trabajadores.map((trabajador) => (
-                <option key={trabajador.id_usuario} value={trabajador.id_usuario}>
-                  {trabajador.nombre} {trabajador.apellido} - {trabajador.rol}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-2 block font-medium text-gray-700">
-              Cantidad objetivo
-            </label>
-            <input
-              name="cantidad_objetivo"
-              type="number"
-              min="1"
-              step="1"
-              value={form.cantidad_objetivo}
-              onChange={handleChange}
-              placeholder="Ej: 100"
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-emerald-500"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block font-medium text-gray-700">
-              Observación
-            </label>
-            <input
-              name="observacion"
-              value={form.observacion}
-              onChange={handleChange}
-              placeholder="Ej: Prioridad para tienda Bilbao"
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-emerald-500"
-            />
-          </div>
-
-          {error ? (
-            <p className="md:col-span-2 rounded-xl bg-red-50 px-4 py-3 text-red-600">
-              {error}
-            </p>
-          ) : null}
-
-          {mensaje ? (
-            <p className="md:col-span-2 rounded-xl bg-emerald-100 px-4 py-3 text-emerald-700">
-              {mensaje}
-            </p>
-          ) : null}
-
-          <div className="md:col-span-2">
-            <button
-              type="submit"
-              disabled={guardando}
-              className="rounded-full bg-emerald-500 px-8 py-3 font-bold text-white hover:bg-emerald-600 disabled:opacity-60"
-            >
-              {guardando ? "Guardando..." : "Crear tarea de envasado"}
-            </button>
-          </div>
-        </form>
-
+          <p className="mt-3 max-w-3xl text-gray-600">
+            En esta vista solo se revisan las tareas activas y se registra el avance
+            real de paquetes completados. La creación de nuevas tareas será gestionada
+            desde la vista del operador.
+          </p>
+        </div>
         <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 px-6 py-4">
             <h2 className="text-2xl font-bold text-gray-800">
@@ -441,8 +428,9 @@ export default function EnvasadoPage() {
                       </td>
 
                       <td className="px-6 py-4">
-                        {tarea.estado !== "FINALIZADA" &&
-                        tarea.estado !== "CANCELADA" ? (
+                        {usuario?.rol === "ENVASADO" &&
+                          tarea.estado !== "FINALIZADA" &&
+                          tarea.estado !== "CANCELADA" ? (
                           <button
                             type="button"
                             onClick={() => abrirFormularioAvance(tarea)}
@@ -452,7 +440,7 @@ export default function EnvasadoPage() {
                           </button>
                         ) : (
                           <span className="text-sm text-gray-500">
-                            Sin acciones
+                            Solo supervisión
                           </span>
                         )}
                       </td>
@@ -483,7 +471,7 @@ export default function EnvasadoPage() {
 
               <form
                 onSubmit={registrarAvance}
-                className="grid gap-4 md:grid-cols-3"
+                className="grid gap-4 md:grid-cols-2"
               >
                 <div>
                   <label className="mb-2 block font-medium text-gray-700">
@@ -505,22 +493,7 @@ export default function EnvasadoPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block font-medium text-gray-700">
-                    Observación
-                  </label>
-                  <input
-                    value={avanceForm.observacion}
-                    onChange={(event) =>
-                      setAvanceForm((prev) => ({
-                        ...prev,
-                        observacion: event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-emerald-500"
-                    placeholder="Ej: avance parcial"
-                  />
-                </div>
+
 
                 <div className="flex items-end gap-3">
                   <button
