@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import DatosRrhhSection from "./DatosRrhhSection";
 
 type TrabajadorDetalle = {
   rut: string;
@@ -49,7 +50,7 @@ export default async function TrabajadorDetallePage({
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] text-gray-800">
-      <main className="mx-auto max-w-5xl px-5 py-10">
+      <main className="mx-auto max-w-7xl px-5 py-10">
         <section className="rounded-3xl border border-white/40 bg-white/80 p-8 shadow-[0_10px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
           <Link
             href="/recursos-humanos"
@@ -138,7 +139,11 @@ export default async function TrabajadorDetallePage({
                   </div>
                 </div>
               </div>
+              
             </div>
+
+            <DatosRrhhSection rut={trabajador.rut} />
+            
           </div>
         </section>
       </main>

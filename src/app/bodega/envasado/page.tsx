@@ -400,11 +400,11 @@ export default function EnvasadoPage() {
                       </td>
 
                       <td className="px-6 py-4">
-                        {tarea.cantidad_objetivo} {tarea.unidad_medida}
+                        {tarea.cantidad_objetivo} unidades
                       </td>
 
                       <td className="px-6 py-4">
-                        {tarea.cantidad_completada} {tarea.unidad_medida}
+                        {tarea.cantidad_completada} unidades
                       </td>
 
                       <td className="px-6 py-4">

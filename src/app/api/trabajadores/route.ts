@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
-const ROLES_CON_TIENDA = ["VENDEDOR", "ENCARGADO_TIENDA"];
+const ROLES_CON_TIENDA = ["VENDEDOR"];
 
 export async function GET() {
   try {
@@ -10,21 +10,27 @@ export async function GET() {
     const { data, error } = await supabase
       .from("usuario")
       .select(`
-        id_usuario,
-        rut,
-        nombre,
-        apellido,
-        telefono,
-        correo,
-        direccion,
-        rol,
-        activo,
-        tiendas_id_tienda,
-        tiendas:tiendas_id_tienda (
-          id_tienda,
-          nombre
-        )
-      `)
+  id_usuario,
+  rut,
+  nombre,
+  apellido,
+  telefono,
+  correo,
+  correo_personal,
+  direccion,
+  rol,
+  cargo,
+  horario_inicio,
+  horario_fin,
+  dias_trabajo,
+  fecha_ingreso,
+  activo,
+  tiendas_id_tienda,
+  tiendas:tiendas_id_tienda (
+    id_tienda,
+    nombre
+  )
+`)
       .eq("eliminado", false)
       .order("id_usuario", { ascending: true });
 
@@ -37,13 +43,9 @@ export async function GET() {
 
     const trabajadores = data.map((trabajador: any) => {
       let tienda = "Sin asignación";
+
       if (trabajador.tiendas?.nombre) {
         tienda = trabajador.tiendas.nombre;
-      } else if (
-        trabajador.rol === "BODEGA" ||
-        trabajador.rol === "ENVASADO"
-      ) {
-        tienda = "Bodega Central";
       }
 
       return {
@@ -53,9 +55,16 @@ export async function GET() {
         apellido: trabajador.apellido,
         telefono: trabajador.telefono,
         correo: trabajador.correo,
+        correo_personal: trabajador.correo_personal,
         direccion: trabajador.direccion,
         rol: trabajador.rol,
+        cargo: trabajador.cargo,
+        horario_inicio: trabajador.horario_inicio,
+        horario_fin: trabajador.horario_fin,
+        dias_trabajo: trabajador.dias_trabajo,
+        fecha_ingreso: trabajador.fecha_ingreso,
         tienda,
+        tiendas_id_tienda: trabajador.tiendas_id_tienda,
         estado: trabajador.activo === "S" ? "Activo" : "Inactivo",
       };
     });
@@ -90,21 +99,58 @@ export async function POST(request: Request) {
     const correo = String(payload.correo || "").trim().toLowerCase();
     const direccion = String(payload.direccion || "").trim();
     const rol = String(payload.rol || "").trim().toUpperCase();
+    const correo_personal = String(payload.correo_personal || "")
+      .trim()
+      .toLowerCase();
+
+    const cargo = String(payload.cargo || "").trim();
+
+    const horario_inicio = String(payload.horario_inicio || "").trim();
+    const horario_fin = String(payload.horario_fin || "").trim();
+
+    const dias_trabajo = String(payload.dias_trabajo || "").trim();
+    const fecha_ingreso = String(payload.fecha_ingreso || "").trim();
 
     const activo =
       payload.estado === "Inactivo" || payload.estado === "N" ? "N" : "S";
 
     let tiendas_id_tienda: number | null = null;
 
-    if (ROLES_CON_TIENDA.includes(rol)) {
-      if (!payload.asignacion) {
+    const asignacionRaw = payload.asignacion ?? payload.tiendas_id_tienda ?? "";
+    const asignacionTexto = String(asignacionRaw).trim();
+
+    if (ROLES_CON_TIENDA.includes(rol) && !asignacionTexto) {
+      return NextResponse.json(
+        { error: "Debe seleccionar una tienda para este rol." },
+        { status: 400 }
+      );
+    }
+
+    if (asignacionTexto) {
+      const asignacionNumero = Number(asignacionTexto);
+
+      if (Number.isNaN(asignacionNumero) || asignacionNumero <= 0) {
         return NextResponse.json(
-          { error: "Debe seleccionar una tienda para este rol." },
+          { error: "Debe seleccionar una tienda válida." },
           { status: 400 }
         );
       }
 
-      tiendas_id_tienda = Number(payload.asignacion);
+      const { data: tienda, error: tiendaError } = await supabase
+        .from("tiendas")
+        .select("id_tienda")
+        .eq("id_tienda", asignacionNumero)
+        .eq("activa", "S")
+        .single();
+
+      if (tiendaError || !tienda) {
+        return NextResponse.json(
+          { error: "Debe seleccionar una tienda válida." },
+          { status: 400 }
+        );
+      }
+
+      tiendas_id_tienda = tienda.id_tienda;
     }
 
     if (!rut || rut.length > 9) {
@@ -163,6 +209,12 @@ export async function POST(request: Request) {
           activo,
           tiendas_id_tienda,
           eliminado: false,
+          correo_personal: correo_personal || null,
+          cargo: cargo || null,
+          horario_inicio: horario_inicio || null,
+          horario_fin: horario_fin || null,
+          dias_trabajo: dias_trabajo || null,
+          fecha_ingreso: fecha_ingreso || null,
         })
         .eq("id_usuario", trabajadorExistente.id_usuario)
         .select()
@@ -198,6 +250,12 @@ export async function POST(request: Request) {
         rol,
         activo,
         tiendas_id_tienda,
+        correo_personal: correo_personal || null,
+        cargo: cargo || null,
+        horario_inicio: horario_inicio || null,
+        horario_fin: horario_fin || null,
+        dias_trabajo: dias_trabajo || null,
+        fecha_ingreso: fecha_ingreso || null,
       })
       .select()
       .single();

@@ -57,7 +57,7 @@ export default function LoginPage() {
         return;
       }
 
-      if (rolUsuario === "OPERADOR" || rolUsuario === "JEFE_OPERACIONES") {
+      if (rolUsuario === "OPERADOR") {
         router.push("/bodega/pedidos-reposicion");
         return;
       }

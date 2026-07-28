@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 
 type UsuarioPerfil = {
   id_usuario: number;
@@ -50,10 +51,11 @@ type InfoTienda = {
 };
 
 type ProductoEnvasado = {
-  id_producto: number;
+  id_producto: number | null;
   codigo: string;
   nombre: string;
   unidad_medida: string;
+  activo: number;
 };
 
 type TrabajadorEnvasado = {
@@ -65,11 +67,47 @@ type TrabajadorEnvasado = {
   estado?: string;
 };
 
+type TareaEnvasadoSupervision = {
+  id_envasado: number;
+  producto: string;
+  codigo_producto: string;
+  trabajador: string;
+  cantidad_objetivo: number;
+  cantidad_completada: number;
+  avance: number;
+  estado: string;
+  observacion: string | null;
+  creado_en: string;
+  iniciado_en: string | null;
+  finalizado_en: string | null;
+};
+
 const initialFormEnvasado = {
   productos_id_producto: "",
   usuario_id_usuario: "",
   cantidad_objetivo: "",
   observacion: "",
+};
+
+type TurnoTrabajadorTienda = {
+  id_usuario: number;
+  nombre: string;
+  nombre_completo: string;
+  cargo: string;
+  rol: string;
+  horario: string;
+  dias_trabajo: string;
+};
+
+type TiendaResumen = {
+  id_tienda: number;
+  nombre: string;
+  direccion: string;
+  telefono: string;
+  jefe_local: string;
+  jefe_local_completo: string | null;
+  total_trabajadores: number;
+  turnos: TurnoTrabajadorTienda[];
 };
 
 export default function PedidosReposicionOperacionesPage() {
@@ -79,6 +117,7 @@ export default function PedidosReposicionOperacionesPage() {
   const [pedidos, setPedidos] = useState<PedidoReposicionGrupo[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [tiendasResumen, setTiendasResumen] = useState<TiendaResumen[]>([]);
 
   const [estadosEditados, setEstadosEditados] = useState<Record<string, string>>({});
   const [comentariosEditados, setComentariosEditados] = useState<Record<string, string>>({});
@@ -103,9 +142,39 @@ export default function PedidosReposicionOperacionesPage() {
   const [mensajeEnvasado, setMensajeEnvasado] = useState("");
   const [errorEnvasado, setErrorEnvasado] = useState("");
 
+  const [tareasEnvasado, setTareasEnvasado] = useState<
+    TareaEnvasadoSupervision[]
+  >([]);
+
+  const [cargandoTareasEnvasado, setCargandoTareasEnvasado] = useState(false);
+
   const [seccionActiva, setSeccionActiva] = useState<
     "LA_CONCEPCION" | "BILBAO" | "PROVIDENCIA" | "BODEGA"
   >("LA_CONCEPCION");
+
+  const nombreUsuario = usuario
+    ? `${usuario.nombre} ${usuario.apellido}`
+    : "Usuario";
+
+  const inicialUsuario = usuario?.nombre
+    ? usuario.nombre.charAt(0).toUpperCase()
+    : "U";
+
+  async function cargarResumenTiendas() {
+    try {
+      const response = await fetch("/api/tiendas/resumen");
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Error al cargar resumen de tiendas.");
+      }
+
+      setTiendasResumen(result.data || []);
+    } catch (error) {
+      console.error(error);
+      setTiendasResumen([]);
+    }
+  }
 
   useEffect(() => {
     async function cargarVista() {
@@ -147,7 +216,10 @@ export default function PedidosReposicionOperacionesPage() {
           return;
         }
 
-        if (rol !== "ADMINISTRADOR" && rol !== "JEFE_OPERACIONES") {
+        if (
+          rol !== "ADMINISTRADOR" &&
+          rol !== "OPERADOR"
+        ) {
           await supabase.auth.signOut();
           router.push("/login");
           return;
@@ -165,6 +237,8 @@ export default function PedidosReposicionOperacionesPage() {
         }
 
         setPedidos(pedidosResult.data || []);
+        await cargarResumenTiendas();
+        await cargarTareasEnvasado();
       } catch (error) {
         setError(
           error instanceof Error
@@ -195,8 +269,6 @@ export default function PedidosReposicionOperacionesPage() {
     );
   }
 
-
-
   function obtenerClaseEstado(estado: string) {
     if (estado === "NO REVISADO") {
       return "bg-red-100 text-red-700";
@@ -210,10 +282,6 @@ export default function PedidosReposicionOperacionesPage() {
       return "bg-blue-100 text-blue-700";
     }
 
-    // if (estado === "ENTREGADO") {
-    //   return "bg-emerald-100 text-emerald-700";
-    // }
-
     if (estado === "RECHAZADO") {
       return "bg-gray-200 text-gray-700";
     }
@@ -223,6 +291,13 @@ export default function PedidosReposicionOperacionesPage() {
 
   function formatearEstado(estado: string) {
     return estado.replaceAll("_", " ");
+  }
+
+  function obtenerResumenTienda(nombreTienda: string) {
+    return tiendasResumen.find(
+      (tienda) =>
+        tienda.nombre.toLowerCase().trim() === nombreTienda.toLowerCase().trim()
+    );
   }
 
   async function actualizarPedido(grupoPedidoId: string) {
@@ -292,6 +367,7 @@ export default function PedidosReposicionOperacionesPage() {
 
   function renderTarjetaTienda(nombreTienda: string, pedidosTienda: PedidoReposicionGrupo[]) {
     const infoTienda = infoTiendas[nombreTienda];
+    const resumenTienda = obtenerResumenTienda(infoTienda?.nombre || nombreTienda);
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-start justify-between gap-3">
@@ -319,7 +395,7 @@ export default function PedidosReposicionOperacionesPage() {
                     Jefe local
                   </p>
                   <p className="mt-2 text-base font-semibold text-gray-800">
-                    {infoTienda.jefeLocal}
+                    {resumenTienda?.jefe_local || "Por definir"}
                   </p>
                 </div>
 
@@ -328,7 +404,7 @@ export default function PedidosReposicionOperacionesPage() {
                     Teléfono
                   </p>
                   <p className="mt-2 text-base font-semibold text-gray-800">
-                    {infoTienda.telefono}
+                    {resumenTienda?.telefono || "Por definir"}
                   </p>
                 </div>
 
@@ -337,7 +413,7 @@ export default function PedidosReposicionOperacionesPage() {
                     Dirección
                   </p>
                   <p className="mt-2 text-base font-semibold text-gray-800">
-                    {infoTienda.direccion}
+                    {resumenTienda?.direccion || infoTienda?.direccion || "Por definir"}
                   </p>
                 </div>
               </div>
@@ -348,19 +424,35 @@ export default function PedidosReposicionOperacionesPage() {
                 </p>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  {infoTienda.turnos.map((turno) => (
-                    <div
-                      key={`${turno.trabajador}-${turno.horario}`}
-                      className="rounded-xl bg-white px-5 py-4"
-                    >
-                      <p className="text-base font-semibold text-gray-800">
-                        {turno.trabajador}
-                      </p>
-                      <p className="mt-1 text-sm text-gray-500">
-                        {turno.horario}
+                  {resumenTienda?.turnos && resumenTienda.turnos.length > 0 ? (
+                    resumenTienda.turnos.map((turno) => (
+                      <div
+                        key={turno.id_usuario}
+                        className="rounded-xl bg-white p-5 shadow-sm"
+                      >
+                        <p className="font-bold text-gray-800">{turno.nombre}</p>
+
+                        <p className="mt-2 text-sm text-gray-500">
+                          {turno.horario}
+                        </p>
+
+                        <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-600">
+                          {turno.cargo}
+                        </p>
+
+                        <p className="mt-1 text-xs text-gray-500">
+                          {turno.dias_trabajo}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-xl bg-white p-5 shadow-sm">
+                      <p className="font-bold text-gray-800">Sin trabajadores asignados</p>
+                      <p className="mt-2 text-sm text-gray-500">
+                        Asigna trabajadores a esta tienda desde Recursos Humanos.
                       </p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
@@ -591,7 +683,7 @@ export default function PedidosReposicionOperacionesPage() {
       setErrorEnvasado("");
 
       const [productosRes, trabajadoresRes] = await Promise.all([
-        fetch("/api/productos"),
+        fetch("/api/lioren/productos-cache"),
         fetch("/api/trabajadores"),
       ]);
 
@@ -684,7 +776,7 @@ export default function PedidosReposicionOperacionesPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          productos_id_producto: Number(formEnvasado.productos_id_producto),
+          producto_codigo: formEnvasado.productos_id_producto,
           usuario_id_usuario: Number(formEnvasado.usuario_id_usuario),
           cantidad_objetivo: Number(formEnvasado.cantidad_objetivo),
           observacion: formEnvasado.observacion,
@@ -699,6 +791,8 @@ export default function PedidosReposicionOperacionesPage() {
 
       setMensajeEnvasado("Tarea de envasado creada correctamente.");
       setFormEnvasado(initialFormEnvasado);
+      await cargarResumenTiendas();
+      await cargarTareasEnvasado();
     } catch (error) {
       setErrorEnvasado(
         error instanceof Error
@@ -710,7 +804,25 @@ export default function PedidosReposicionOperacionesPage() {
     }
   }
 
+  async function cargarTareasEnvasado() {
+    try {
+      setCargandoTareasEnvasado(true);
 
+      const response = await fetch("/api/envasado");
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Error al cargar tareas de envasado.");
+      }
+
+      setTareasEnvasado(result.data || []);
+    } catch (error) {
+      console.error(error);
+      setTareasEnvasado([]);
+    } finally {
+      setCargandoTareasEnvasado(false);
+    }
+  }
 
 
 
@@ -751,16 +863,25 @@ export default function PedidosReposicionOperacionesPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <p className="hidden text-sm text-gray-600 sm:block">
-              {usuario?.nombre} {usuario?.apellido}
-            </p>
+            <Link
+              href="/profile"
+              className="flex items-center gap-3 rounded-full bg-emerald-500 px-3 py-2 text-white shadow-sm transition hover:bg-emerald-600"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 font-bold text-white">
+                {inicialUsuario}
+              </div>
+
+              <span className="hidden font-medium sm:inline">
+                {nombreUsuario}
+              </span>
+            </Link>
 
             <button
               type="button"
               onClick={cerrarSesion}
-              className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-600"
             >
-              Cerrar sesión
+              Cerrar Sesión
             </button>
           </div>
         </div>
@@ -834,11 +955,13 @@ export default function PedidosReposicionOperacionesPage() {
                       : "Selecciona un producto"}
                   </option>
 
-                  {productosEnvasado.map((producto) => (
-                    <option key={producto.id_producto} value={producto.id_producto}>
-                      {producto.codigo} - {producto.nombre}
-                    </option>
-                  ))}
+                  {productosEnvasado
+                    .filter((producto) => producto.activo === 1)
+                    .map((producto) => (
+                      <option key={producto.codigo} value={producto.codigo}>
+                        {producto.codigo} - {producto.nombre}
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -946,6 +1069,121 @@ export default function PedidosReposicionOperacionesPage() {
             </form>
           ) : null}
 
+          <section className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">
+                  Supervisión
+                </p>
+
+                <h2 className="mt-2 text-2xl font-bold text-gray-800">
+                  Avance de tareas de envasado
+                </h2>
+
+                <p className="mt-2 max-w-3xl text-sm text-gray-600">
+                  Revisa el objetivo, avance, estado y observaciones de las tareas asignadas al equipo de envasado.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={cargarTareasEnvasado}
+                disabled={cargandoTareasEnvasado}
+                className="w-fit rounded-full border border-emerald-200 bg-white px-6 py-3 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-60"
+              >
+                {cargandoTareasEnvasado ? "Actualizando..." : "Actualizar avance"}
+              </button>
+            </div>
+
+            {cargandoTareasEnvasado ? (
+              <p className="rounded-xl bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">
+                Cargando tareas de envasado...
+              </p>
+            ) : tareasEnvasado.length === 0 ? (
+              <p className="rounded-xl bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">
+                Todavía no hay tareas de envasado asignadas.
+              </p>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-gray-200">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-emerald-50 text-emerald-800">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Producto</th>
+                      <th className="px-4 py-3 font-semibold">Envasador</th>
+                      <th className="px-4 py-3 font-semibold">Objetivo</th>
+                      <th className="px-4 py-3 font-semibold">Completado</th>
+                      <th className="px-4 py-3 font-semibold">Avance</th>
+                      <th className="px-4 py-3 font-semibold">Estado</th>
+                      <th className="px-4 py-3 font-semibold">Observación</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {tareasEnvasado.map((tarea) => (
+                      <tr
+                        key={tarea.id_envasado}
+                        className="border-t border-gray-100"
+                      >
+                        <td className="px-4 py-3">
+                          <p className="font-semibold text-gray-800">
+                            {tarea.producto}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {tarea.codigo_producto}
+                          </p>
+                        </td>
+
+                        <td className="px-4 py-3 text-gray-700">
+                          {tarea.trabajador}
+                        </td>
+
+                        <td className="px-4 py-3 text-gray-700">
+                          {tarea.cantidad_objetivo} unidades
+                        </td>
+
+                        <td className="px-4 py-3 text-gray-700">
+                          {tarea.cantidad_completada} unidades
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <div className="mb-1 h-2 w-32 rounded-full bg-gray-200">
+                            <div
+                              className="h-2 rounded-full bg-emerald-500"
+                              style={{
+                                width: `${Math.min(tarea.avance, 100)}%`,
+                              }}
+                            />
+                          </div>
+
+                          <span className="text-xs font-semibold text-gray-600">
+                            {tarea.avance}%
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
+                            {formatearEstado(tarea.estado)}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {tarea.observacion ? (
+                            <p className="max-w-xs rounded-xl bg-emerald-50 px-3 py-2 text-xs text-gray-700">
+                              {tarea.observacion}
+                            </p>
+                          ) : (
+                            <span className="text-xs text-gray-400">
+                              Sin observación
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
 
 
 

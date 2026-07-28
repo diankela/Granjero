@@ -137,7 +137,7 @@ export async function POST(request: Request) {
         hora_pedido: horaPedido,
         grupo_pedido_id,
         enviado_por_rol: enviado_por_rol || null,
-        estado: "NO_REVISADO",
+        estado: "PENDIENTE",
       };
     });
 
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
         tiendas_id_tienda,
         fecha: fechaPedido,
         hora_pedido: horaPedido,
-        estado: "NO_REVISADO",
+        estado: "PENDIENTE",
       });
 
     if (grupoError) {

@@ -1,19 +1,37 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
-const ROLES_CON_TIENDA = ["VENDEDOR", "ENCARGADO_TIENDA"];
+const ROLES_CON_TIENDA = ["VENDEDOR"];
 
-async function resolveTiendaId(supabase: any, tiendaNombre?: string | null) {
-  const nombre = String(tiendaNombre || "").trim();
+async function resolveTiendaId(supabase: any, asignacion?: string | number | null) {
+  const valor = String(asignacion || "").trim();
 
-  if (!nombre || nombre === "Sin asignación" || nombre === "Bodega Central") {
+  if (!valor || valor === "Sin asignación" || valor === "Bodega Central") {
     return null;
+  }
+
+  const valorNumerico = Number(valor);
+
+  if (!Number.isNaN(valorNumerico) && valorNumerico > 0) {
+    const { data, error } = await supabase
+      .from("tiendas")
+      .select("id_tienda")
+      .eq("id_tienda", valorNumerico)
+      .eq("activa", "S")
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    return data?.id_tienda ?? null;
   }
 
   const { data, error } = await supabase
     .from("tiendas")
     .select("id_tienda")
-    .eq("nombre", nombre)
+    .eq("nombre", valor)
+    .eq("activa", "S")
     .maybeSingle();
 
   if (error) {
@@ -41,12 +59,28 @@ export async function PUT(
     const direccion = String(payload.direccion || "").trim();
     const rol = String(payload.rol || "").trim().toUpperCase();
     const activo = payload.estado === "Inactivo" || payload.estado === "N" ? "N" : "S";
+    const correo_personal = String(payload.correo_personal || "").trim().toLowerCase();
+    const cargo = String(payload.cargo || "").trim();
+    const horario_inicio = String(payload.horario_inicio || "").trim();
+    const horario_fin = String(payload.horario_fin || "").trim();
+    const dias_trabajo = String(payload.dias_trabajo || "").trim();
+    const fecha_ingreso = String(payload.fecha_ingreso || "").trim();
+
 
     let tiendas_id_tienda: number | null = null;
 
-    if (ROLES_CON_TIENDA.includes(rol)) {
-      const tiendaNombre = payload.asignacion ?? payload.tienda;
-      tiendas_id_tienda = await resolveTiendaId(supabase, tiendaNombre);
+    const asignacionRaw = payload.asignacion ?? payload.tiendas_id_tienda ?? "";
+    const asignacionTexto = String(asignacionRaw).trim();
+
+    if (ROLES_CON_TIENDA.includes(rol) && !asignacionTexto) {
+      return NextResponse.json(
+        { error: "Debe seleccionar una tienda válida para este rol." },
+        { status: 400 }
+      );
+    }
+
+    if (asignacionTexto) {
+      tiendas_id_tienda = await resolveTiendaId(supabase, asignacionTexto);
 
       if (!tiendas_id_tienda) {
         return NextResponse.json(
@@ -83,8 +117,14 @@ export async function PUT(
       apellido,
       telefono,
       correo,
+      correo_personal: correo_personal || null,
       direccion: direccion || null,
       rol,
+      cargo: cargo || null,
+      horario_inicio: horario_inicio || null,
+      horario_fin: horario_fin || null,
+      dias_trabajo: dias_trabajo || null,
+      fecha_ingreso: fecha_ingreso || null,
       activo,
       tiendas_id_tienda,
     };

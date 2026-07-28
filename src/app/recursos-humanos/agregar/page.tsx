@@ -15,8 +15,14 @@ type FormValues = {
   apellido: string;
   telefono: string;
   correo: string;
+  correo_personal: string;
   direccion: string;
   rol: string;
+  cargo: string;
+  horario_inicio: string;
+  horario_fin: string;
+  dias_trabajo: string;
+  fecha_ingreso: string;
   asignacion: string;
   estado: string;
 };
@@ -29,8 +35,14 @@ const initialValues: FormValues = {
   apellido: "",
   telefono: "",
   correo: "",
+  correo_personal: "",
   direccion: "",
   rol: "",
+  cargo: "",
+  horario_inicio: "",
+  horario_fin: "",
+  dias_trabajo: "",
+  fecha_ingreso: "",
   asignacion: "",
   estado: "",
 };
@@ -136,7 +148,7 @@ export default function AgregarTrabajadorPage() {
       nextErrors.rol = "Debes seleccionar un rol.";
     }
 
-    const rolesConTienda = ["VENDEDOR", "ENCARGADO_TIENDA"];
+    const rolesConTienda = ["VENDEDOR"];
 
     if (rolesConTienda.includes(values.rol) && !values.asignacion) {
       nextErrors.asignacion = "Debes seleccionar una tienda para este rol.";
@@ -167,8 +179,14 @@ export default function AgregarTrabajadorPage() {
         apellido: values.apellido.trim(),
         telefono: values.telefono.trim(),
         correo: values.correo.trim().toLowerCase(),
+        correo_personal: values.correo_personal.trim().toLowerCase(),
         direccion: values.direccion.trim(),
         rol: values.rol.trim().toUpperCase(),
+        cargo: values.cargo.trim(),
+        horario_inicio: values.horario_inicio,
+        horario_fin: values.horario_fin,
+        dias_trabajo: values.dias_trabajo.trim(),
+        fecha_ingreso: values.fecha_ingreso,
         asignacion: values.asignacion || undefined,
         estado: values.estado === "Inactivo" ? "N" : "S",
       };
@@ -203,67 +221,67 @@ export default function AgregarTrabajadorPage() {
   };
 
   async function cargarRoles() {
-  try {
-    setCargandoRoles(true);
+    try {
+      setCargandoRoles(true);
 
-    const response = await fetch("/api/roles");
-    const result = await response.json();
+      const response = await fetch("/api/roles");
+      const result = await response.json();
 
-    if (!response.ok) {
-      throw new Error(result.error || "Error al cargar roles.");
+      if (!response.ok) {
+        throw new Error(result.error || "Error al cargar roles.");
+      }
+
+      setRoles(result.data || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setCargandoRoles(false);
+    }
+  }
+
+  async function guardarNuevoRol() {
+    setErrorRol("");
+
+    const nombreRol = nuevoRol.trim().toUpperCase().replaceAll(" ", "_");
+
+    if (!nombreRol) {
+      setErrorRol("Debes ingresar un nombre para el rol.");
+      return;
     }
 
-    setRoles(result.data || []);
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setCargandoRoles(false);
-  }
-}
+    try {
+      setGuardandoRol(true);
 
-async function guardarNuevoRol() {
-  setErrorRol("");
+      const response = await fetch("/api/roles", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre: nombreRol,
+        }),
+      });
 
-  const nombreRol = nuevoRol.trim().toUpperCase().replaceAll(" ", "_");
+      const result = await response.json();
 
-  if (!nombreRol) {
-    setErrorRol("Debes ingresar un nombre para el rol.");
-    return;
-  }
+      if (!response.ok) {
+        throw new Error(result.error || "Error al crear el rol.");
+      }
 
-  try {
-    setGuardandoRol(true);
-
-    const response = await fetch("/api/roles", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        nombre: nombreRol,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || "Error al crear el rol.");
+      setRoles((prev) => [...prev, result.data]);
+      handleChange("rol", result.data.nombre);
+      setNuevoRol("");
+      setMostrarNuevoRol(false);
+    } catch (error) {
+      setErrorRol(
+        error instanceof Error
+          ? error.message
+          : "Error al crear el rol."
+      );
+    } finally {
+      setGuardandoRol(false);
     }
-
-    setRoles((prev) => [...prev, result.data]);
-    handleChange("rol", result.data.nombre);
-    setNuevoRol("");
-    setMostrarNuevoRol(false);
-  } catch (error) {
-    setErrorRol(
-      error instanceof Error
-        ? error.message
-        : "Error al crear el rol."
-    );
-  } finally {
-    setGuardandoRol(false);
   }
-}
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] text-gray-800">
@@ -348,6 +366,18 @@ async function guardarNuevoRol() {
                   {errors.correo ? <p className="mt-1 text-sm text-red-500">{errors.correo}</p> : null}
                 </div>
                 <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Correo personal
+                  </label>
+                  <input
+                    value={values.correo_personal}
+                    onChange={(event) => handleChange("correo_personal", event.target.value)}
+                    type="email"
+                    placeholder="Ej: trabajador@gmail.com"
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Dirección</label>
                   <input
                     value={values.direccion}
@@ -376,9 +406,8 @@ async function guardarNuevoRol() {
                     value={values.rol}
                     onChange={(event) => handleChange("rol", event.target.value)}
                     disabled={cargandoRoles}
-                    className={`w-full rounded-xl border bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500 disabled:bg-gray-100 ${
-                      errors.rol ? "border-red-400" : "border-gray-300"
-                    }`}
+                    className={`w-full rounded-xl border bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500 disabled:bg-gray-100 ${errors.rol ? "border-red-400" : "border-gray-300"
+                      }`}
                   >
                     <option value="">
                       {cargandoRoles ? "Cargando roles..." : "Selecciona un rol"}
@@ -396,64 +425,133 @@ async function guardarNuevoRol() {
                   ) : null}
 
                   <div className="mt-3">
-  {!mostrarNuevoRol ? (
-    <button
-      type="button"
-      onClick={() => {
-        setMostrarNuevoRol(true);
-        setErrorRol("");
-      }}
-      className="text-sm font-semibold text-emerald-700 transition hover:text-emerald-900"
-    >
-      + Agregar nuevo rol
-    </button>
-  ) : (
-    <div className="rounded-xl border border-emerald-200 bg-white p-4">
-      <label className="mb-2 block text-sm font-medium text-gray-700">
-        Nuevo rol
-      </label>
+                    {!mostrarNuevoRol ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMostrarNuevoRol(true);
+                          setErrorRol("");
+                        }}
+                        className="text-sm font-semibold text-emerald-700 transition hover:text-emerald-900"
+                      >
+                        + Agregar nuevo rol
+                      </button>
+                    ) : (
+                      <div className="rounded-xl border border-emerald-200 bg-white p-4">
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
+                          Nuevo rol
+                        </label>
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <input
-          type="text"
-          value={nuevoRol}
-          onChange={(event) => setNuevoRol(event.target.value)}
-          placeholder="Ej: Supervisor bodega"
-          className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
-        />
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          <input
+                            type="text"
+                            value={nuevoRol}
+                            onChange={(event) => setNuevoRol(event.target.value)}
+                            placeholder="Ej: Supervisor bodega"
+                            className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+                          />
 
-        <button
-          type="button"
-          onClick={guardarNuevoRol}
-          disabled={guardandoRol}
-          className="rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:bg-emerald-300"
-        >
-          {guardandoRol ? "Guardando..." : "Guardar rol"}
-        </button>
+                          <button
+                            type="button"
+                            onClick={guardarNuevoRol}
+                            disabled={guardandoRol}
+                            className="rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:bg-emerald-300"
+                          >
+                            {guardandoRol ? "Guardando..." : "Guardar rol"}
+                          </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            setMostrarNuevoRol(false);
-            setNuevoRol("");
-            setErrorRol("");
-          }}
-          className="rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
-        >
-          Cancelar
-        </button>
-      </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMostrarNuevoRol(false);
+                              setNuevoRol("");
+                              setErrorRol("");
+                            }}
+                            className="rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
 
-      {errorRol ? (
-        <p className="mt-2 text-sm text-red-500">{errorRol}</p>
-      ) : null}
+                        {errorRol ? (
+                          <p className="mt-2 text-sm text-red-500">{errorRol}</p>
+                        ) : null}
 
-      <p className="mt-2 text-xs text-gray-500">
-        El rol se guardará en mayúsculas y quedará disponible para futuros trabajadores.
-      </p>
-    </div>
-  )}
-</div>
+                        <p className="mt-2 text-xs text-gray-500">
+                          El rol se guardará en mayúsculas y quedará disponible para futuros trabajadores.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Cargo
+                  </label>
+                  <select
+                    value={values.cargo}
+                    onChange={(event) => handleChange("cargo", event.target.value)}
+                    className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+                  >
+                    <option value="">Seleccionar cargo</option>
+                    <option value="Jefe de tienda">Jefe de tienda</option>
+                    <option value="Ventas">Ventas</option>
+                    <option value="Apoyo">Apoyo</option>
+                    <option value="Bodega">Bodega</option>
+                    <option value="Envasado">Empaque</option>
+                    <option value="Administración">Administración</option>
+                  </select>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      Horario inicio
+                    </label>
+                    <input
+                      value={values.horario_inicio}
+                      onChange={(event) => handleChange("horario_inicio", event.target.value)}
+                      type="time"
+                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      Horario fin
+                    </label>
+                    <input
+                      value={values.horario_fin}
+                      onChange={(event) => handleChange("horario_fin", event.target.value)}
+                      type="time"
+                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Días de trabajo
+                  </label>
+                  <input
+                    value={values.dias_trabajo}
+                    onChange={(event) => handleChange("dias_trabajo", event.target.value)}
+                    type="text"
+                    placeholder="Ej: Lunes a viernes"
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Fecha de ingreso
+                  </label>
+                  <input
+                    value={values.fecha_ingreso}
+                    onChange={(event) => handleChange("fecha_ingreso", event.target.value)}
+                    type="date"
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+                  />
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Asignación</label>
