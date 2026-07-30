@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import DatosRrhhSection from "./DatosRrhhSection";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 type TrabajadorDetalle = {
   rut: string;
@@ -8,32 +9,73 @@ type TrabajadorDetalle = {
   apellido: string;
   telefono: string;
   correo: string;
+  correo_personal: string;
   direccion: string;
   rol: string;
+  cargo: string;
+  horario_inicio: string;
+  horario_fin: string;
+  dias_trabajo: string;
+  fecha_ingreso: string;
   tienda: string;
   estado: string;
 };
 
 async function getTrabajador(rut: string): Promise<TrabajadorDetalle | null> {
-  try {
-    const response = await fetch(`http://localhost:3000/api/trabajadores`, {
-      cache: "no-store",
-    });
+  const supabase = createSupabaseServerClient();
 
-    if (!response.ok) {
-      return null;
-    }
+  const { data, error } = await supabase
+    .from("usuario")
+    .select(`
+      rut,
+      nombre,
+      apellido,
+      telefono,
+      correo,
+      correo_personal,
+      direccion,
+      rol,
+      cargo,
+      horario_inicio,
+      horario_fin,
+      dias_trabajo,
+      fecha_ingreso,
+      activo,
+      tiendas_id_tienda,
+      tiendas:tiendas_id_tienda (
+        id_tienda,
+        nombre
+      )
+    `)
+    .eq("rut", rut)
+    .eq("eliminado", false)
+    .single();
 
-    const result = await response.json();
-
-    if (!result?.data) {
-      return null;
-    }
-
-    return result.data.find((item: TrabajadorDetalle) => item.rut === rut) ?? null;
-  } catch {
+  if (error || !data) {
     return null;
   }
+
+  const tiendaRelacion = Array.isArray(data.tiendas)
+    ? data.tiendas[0]
+    : data.tiendas;
+
+  return {
+    rut: data.rut,
+    nombre: data.nombre,
+    apellido: data.apellido,
+    telefono: data.telefono,
+    correo: data.correo || "Sin correo de acceso",
+    correo_personal: data.correo_personal || "Sin correo personal",
+    direccion: data.direccion || "Sin dirección",
+    rol: data.rol,
+    cargo: data.cargo || "Sin cargo definido",
+    horario_inicio: data.horario_inicio || "",
+    horario_fin: data.horario_fin || "",
+    dias_trabajo: data.dias_trabajo || "Días por definir",
+    fecha_ingreso: data.fecha_ingreso || "Sin fecha de ingreso",
+    tienda: tiendaRelacion?.nombre || "Sin asignación",
+    estado: data.activo === "S" ? "Activo" : "Inactivo",
+  };
 }
 
 export default async function TrabajadorDetallePage({
@@ -80,11 +122,10 @@ export default async function TrabajadorDetallePage({
                   Editar
                 </Link>
                 <span
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                    trabajador.estado === "Activo"
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${trabajador.estado === "Activo"
                       ? "bg-emerald-100 text-emerald-700"
                       : "bg-amber-100 text-amber-700"
-                  }`}
+                    }`}
                 >
                   {trabajador.estado}
                 </span>
@@ -115,6 +156,10 @@ export default async function TrabajadorDetallePage({
                     <span className="font-medium text-gray-500">Correo</span>
                     <span>{trabajador.correo}</span>
                   </div>
+                  <div className="flex justify-between gap-4 border-b border-gray-200 pb-2">
+                    <span className="font-medium text-gray-500">Correo personal</span>
+                    <span>{trabajador.correo_personal}</span>
+                  </div>
                   <div className="flex justify-between gap-4">
                     <span className="font-medium text-gray-500">Dirección</span>
                     <span className="text-right">{trabajador.direccion}</span>
@@ -130,6 +175,29 @@ export default async function TrabajadorDetallePage({
                     <span>{trabajador.rol}</span>
                   </div>
                   <div className="flex justify-between gap-4 border-b border-emerald-200 pb-2">
+                    <span className="font-medium text-emerald-700">Cargo</span>
+                    <span>{trabajador.cargo}</span>
+                  </div>
+
+                  <div className="flex justify-between gap-4 border-b border-emerald-200 pb-2">
+                    <span className="font-medium text-emerald-700">Horario</span>
+                    <span>
+                      {trabajador.horario_inicio && trabajador.horario_fin
+                        ? `${trabajador.horario_inicio.slice(0, 5)} - ${trabajador.horario_fin.slice(0, 5)} hrs`
+                        : "Sin horario"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-4 border-b border-emerald-200 pb-2">
+                    <span className="font-medium text-emerald-700">Días de trabajo</span>
+                    <span>{trabajador.dias_trabajo}</span>
+                  </div>
+
+                  <div className="flex justify-between gap-4 border-b border-emerald-200 pb-2">
+                    <span className="font-medium text-emerald-700">Fecha ingreso</span>
+                    <span>{trabajador.fecha_ingreso}</span>
+                  </div>
+                  <div className="flex justify-between gap-4 border-b border-emerald-200 pb-2">
                     <span className="font-medium text-emerald-700">Asignación</span>
                     <span>{trabajador.tienda}</span>
                   </div>
@@ -139,11 +207,11 @@ export default async function TrabajadorDetallePage({
                   </div>
                 </div>
               </div>
-              
+
             </div>
 
             <DatosRrhhSection rut={trabajador.rut} />
-            
+
           </div>
         </section>
       </main>
