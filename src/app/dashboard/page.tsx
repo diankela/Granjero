@@ -207,7 +207,7 @@ export default function DashboardPage() {
 
   return (
 
-// _______________________________________HEADER_____________________________________________________________________
+    // _______________________________________HEADER_____________________________________________________________________
 
 
 
@@ -217,7 +217,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4">
             <img src="/granjero-1.png" alt="Granjero logo" className="h-20 w-auto" />
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-9">
             <Link
               href="/profile"
               className="flex items-center gap-3 rounded-full bg-emerald-500 px-3 py-2 text-white shadow-sm transition hover:bg-emerald-600"
@@ -232,7 +232,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={cerrarSesion}
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-600"
+              className="rounded-lg bg-emerald-500 px-6 py-4 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-600"
             >
               Cerrar Sesión
             </button>
@@ -240,8 +240,8 @@ export default function DashboardPage() {
         </nav>
       </header>
 
-{/* _________________________________________________________________________________________________________________________________ */}
-{/* ________________________________________BOX BIENVENIDA____________________________________________________________________________________ */}
+      {/* _________________________________________________________________________________________________________________________________ */}
+      {/* ________________________________________BOX BIENVENIDA____________________________________________________________________________________ */}
 
       <main className="mx-auto max-w-7xl px-5 py-10">
         <section className="box1-glass mb-8 rounded-2xl border border-white/40 bg-white/40 p-8 shadow-[0_8px_32px_rgba(15,23,42,0.12)] backdrop-blur-xl">
@@ -253,9 +253,9 @@ export default function DashboardPage() {
           </p>
         </section>
 
-{/* _________________________________________________________________________________________________________________________________ */}
-{/* ________________________________________TAREAS DE ENVASADO____________________________________________________________________________________ */}
-       
+        {/* _________________________________________________________________________________________________________________________________ */}
+        {/* ________________________________________TAREAS DE ENVASADO____________________________________________________________________________________ */}
+
         <section className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -371,8 +371,8 @@ export default function DashboardPage() {
 
 
 
-{/* _________________________________________________________________________________________________________________________________ */}
-{/* ________________________________________MENUS____________________________________________________________________________________ */}
+        {/* _________________________________________________________________________________________________________________________________ */}
+        {/* ________________________________________MENUS____________________________________________________________________________________ */}
 
 
         <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">

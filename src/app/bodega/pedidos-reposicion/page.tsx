@@ -39,17 +39,6 @@ type PedidoReposicionGrupo = {
   productos: ProductoPedido[];
 };
 
-type InfoTienda = {
-  nombre: string;
-  telefono: string;
-  jefeLocal: string;
-  direccion: string;
-  turnos: {
-    trabajador: string;
-    horario: string;
-  }[];
-};
-
 type ProductoEnvasado = {
   id_producto: number | null;
   codigo: string;
@@ -365,13 +354,16 @@ export default function PedidosReposicionOperacionesPage() {
     }
   }
 
-  function renderTarjetaTienda(nombreTienda: string, pedidosTienda: PedidoReposicionGrupo[]) {
-    const infoTienda = infoTiendas[nombreTienda];
-    const resumenTienda = obtenerResumenTienda(infoTienda?.nombre || nombreTienda);
-    return (
+  function renderTarjetaTienda(
+  nombreTienda: string,
+  pedidosTienda: PedidoReposicionGrupo[]
+) {
+  const resumenTienda = obtenerResumenTienda(nombreTienda);
+
+  return (
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-start justify-between gap-3">
-          {infoTienda ? (
+          
             <div className="mb-6 w-full rounded-2xl border border-emerald-100 bg-emerald-50 p-6">
               <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="rounded-xl bg-white px-5 py-4 lg:min-w-[280px]">
@@ -413,7 +405,7 @@ export default function PedidosReposicionOperacionesPage() {
                     Dirección
                   </p>
                   <p className="mt-2 text-base font-semibold text-gray-800">
-                    {resumenTienda?.direccion || infoTienda?.direccion || "Por definir"}
+                    {resumenTienda?.direccion || "Por definir"}
                   </p>
                 </div>
               </div>
@@ -456,7 +448,7 @@ export default function PedidosReposicionOperacionesPage() {
                 </div>
               </div>
             </div>
-          ) : null}
+          
         </div>
 
         {pedidosTienda.length === 0 ? (
@@ -625,57 +617,6 @@ export default function PedidosReposicionOperacionesPage() {
       cantidad: null,
     },
   ] as const;
-
-  const infoTiendas: Record<string, InfoTienda> = {
-    "La Concepción": {
-      nombre: "La Concepción",
-      telefono: "Por definir",
-      jefeLocal: "Por definir",
-      direccion: "La Concepción",
-      turnos: [
-        {
-          trabajador: "Andreina N",
-          horario: "08:00 - 18:00 hrs",
-        },
-        {
-          trabajador: "Carolina N",
-          horario: "18:01 - 21:00 hrs",
-        },
-      ],
-    },
-    Bilbao: {
-      nombre: "Bilbao",
-      telefono: "Por definir",
-      jefeLocal: "Por definir",
-      direccion: "Bilbao",
-      turnos: [
-        {
-          trabajador: "Por definir",
-          horario: "08:00 - 18:00 hrs",
-        },
-        {
-          trabajador: "Por definir",
-          horario: "18:01 - 21:00 hrs",
-        },
-      ],
-    },
-    Providencia: {
-      nombre: "Providencia",
-      telefono: "Por definir",
-      jefeLocal: "Por definir",
-      direccion: "Providencia",
-      turnos: [
-        {
-          trabajador: "Por definir",
-          horario: "08:00 - 18:00 hrs",
-        },
-        {
-          trabajador: "Por definir",
-          horario: "18:01 - 21:00 hrs",
-        },
-      ],
-    },
-  };
 
   async function cargarDatosEnvasado() {
     try {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 const ROLES_CON_TIENDA = ["VENDEDOR"];
+const ROLES_CON_CORREO_OBLIGATORIO = ["ADMINISTRADOR", "OPERADOR"];
 
 export async function GET() {
   try {
@@ -160,9 +161,16 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!nombre || !apellido || !telefono || !correo || !rol) {
+    if (!nombre || !apellido || !telefono || !rol) {
       return NextResponse.json(
         { error: "Faltan campos obligatorios." },
+        { status: 400 }
+      );
+    }
+
+    if (ROLES_CON_CORREO_OBLIGATORIO.includes(rol) && !correo) {
+      return NextResponse.json(
+        { error: "Este rol necesita un correo de acceso al sistema." },
         { status: 400 }
       );
     }
@@ -174,10 +182,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const filtrosBusqueda = correo
+      ? `rut.eq.${rut},correo.eq.${correo}`
+      : `rut.eq.${rut}`;
+
     const { data: trabajadoresExistentes, error: buscarError } = await supabase
       .from("usuario")
       .select("id_usuario, rut, correo, eliminado")
-      .or(`rut.eq.${rut},correo.eq.${correo}`);
+      .or(filtrosBusqueda);
 
     if (buscarError) {
       return NextResponse.json(
@@ -195,6 +207,33 @@ export async function POST(request: Request) {
       );
     }
 
+    if (cargo === "Jefe de tienda" && tiendas_id_tienda) {
+      const { data: jefeExistente, error: jefeError } = await supabase
+        .from("usuario")
+        .select("id_usuario, nombre, apellido")
+        .eq("tiendas_id_tienda", tiendas_id_tienda)
+        .eq("cargo", "Jefe de tienda")
+        .eq("activo", "S")
+        .eq("eliminado", false)
+        .maybeSingle();
+
+      if (jefeError) {
+        return NextResponse.json(
+          { error: jefeError.message },
+          { status: 400 }
+        );
+      }
+
+      if (jefeExistente) {
+        return NextResponse.json(
+          {
+            error: `Esta tienda ya tiene un jefe asignado: ${jefeExistente.nombre} ${jefeExistente.apellido}.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     if (trabajadorExistente && trabajadorExistente.eliminado === true) {
       const { data, error } = await supabase
         .from("usuario")
@@ -203,7 +242,7 @@ export async function POST(request: Request) {
           nombre,
           apellido,
           telefono,
-          correo,
+          correo: correo || null,
           direccion: direccion || null,
           rol,
           activo,
@@ -238,6 +277,7 @@ export async function POST(request: Request) {
     }
 
 
+
     const { data, error } = await supabase
       .from("usuario")
       .insert({
@@ -245,7 +285,7 @@ export async function POST(request: Request) {
         nombre,
         apellido,
         telefono,
-        correo,
+        correo: correo || null,
         direccion: direccion || null,
         rol,
         activo,

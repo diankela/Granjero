@@ -192,16 +192,25 @@ export default function EditarTrabajadorPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Correo</label>
+                  <label className="mb-2 block font-medium text-gray-700">
+                    Correo de acceso al sistema
+                  </label>
+
                   <input
-                    value={trabajador.correo}
+                    type="email"
+                    value={trabajador.correo || ""}
                     onChange={(event) => handleChange("correo", event.target.value)}
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+                    placeholder="Solo si tendrá acceso al sistema"
+                    className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
                   />
+
+                  <p className="mt-2 text-xs text-gray-500">
+                    Obligatorio solo para Administrador y Operador. Para vendedores de apoyo puede quedar vacío.
+                  </p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Correo personal
+                  <label className="mb-2 block font-medium text-gray-700">
+                    Correo personal del trabajador
                   </label>
                   <input
                     value={trabajador.correo_personal || ""}
@@ -209,7 +218,7 @@ export default function EditarTrabajadorPage() {
                       handleChange("correo_personal", event.target.value)
                     }
                     type="email"
-                    placeholder="Ej: trabajador@gmail.com"
+                    placeholder="Correo personal opcional"
                     className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
                   />
                 </div>

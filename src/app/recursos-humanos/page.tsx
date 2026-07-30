@@ -165,6 +165,7 @@ export default function RecursosHumanosPage() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] text-gray-800">
+      
       <main className="mx-auto max-w-8xl px-5 py-10">
         <section className="rounded-3xl border border-white/40 bg-white/70 p-8 shadow-[0_10px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl">
           <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

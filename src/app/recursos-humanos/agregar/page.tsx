@@ -355,14 +355,21 @@ export default function AgregarTrabajadorPage() {
                   {errors.telefono ? <p className="mt-1 text-sm text-red-500">{errors.telefono}</p> : null}
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Correo</label>
+                  <label className="mb-2 block font-medium text-gray-700">
+                    Correo de acceso al sistema
+                  </label>
+
                   <input
+                    type="email"
                     value={values.correo}
                     onChange={(event) => handleChange("correo", event.target.value)}
-                    type="email"
-                    placeholder="Ej: trabajador@granjero.cl"
-                    className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none focus:border-emerald-500 ${errors.correo ? "border-red-400" : "border-gray-300"}`}
+                    placeholder="Solo si tendrá acceso al sistema"
+                    className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
                   />
+
+                  <p className="mt-2 text-xs text-gray-500">
+                    Obligatorio solo para Administrador y Operador. Para vendedores de apoyo puede quedar vacío.
+                  </p>
                   {errors.correo ? <p className="mt-1 text-sm text-red-500">{errors.correo}</p> : null}
                 </div>
                 <div>

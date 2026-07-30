@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 const ROLES_CON_TIENDA = ["VENDEDOR"];
+const ROLES_CON_CORREO_OBLIGATORIO = ["ADMINISTRADOR", "OPERADOR"];
 
 async function resolveTiendaId(supabase: any, asignacion?: string | number | null) {
   const valor = String(asignacion || "").trim();
@@ -97,9 +98,16 @@ export async function PUT(
       );
     }
 
-    if (!nombre || !apellido || !telefono || !correo || !rol) {
+    if (!nombre || !apellido || !telefono || !rol) {
       return NextResponse.json(
         { error: "Faltan campos obligatorios." },
+        { status: 400 }
+      );
+    }
+
+    if (ROLES_CON_CORREO_OBLIGATORIO.includes(rol) && !correo) {
+      return NextResponse.json(
+        { error: "Este rol necesita un correo de acceso al sistema." },
         { status: 400 }
       );
     }
@@ -116,7 +124,7 @@ export async function PUT(
       nombre,
       apellido,
       telefono,
-      correo,
+      correo: correo || null,
       correo_personal: correo_personal || null,
       direccion: direccion || null,
       rol,
@@ -128,6 +136,69 @@ export async function PUT(
       activo,
       tiendas_id_tienda,
     };
+
+    if (correo) {
+      const { data: correoExistente, error: correoError } = await supabase
+        .from("usuario")
+        .select("id_usuario, rut, correo")
+        .eq("correo", correo)
+        .neq("rut", rut)
+        .eq("eliminado", false)
+        .maybeSingle();
+
+      if (correoError) {
+        return NextResponse.json(
+          { error: correoError.message },
+          { status: 400 }
+        );
+      }
+
+      if (correoExistente) {
+        return NextResponse.json(
+          { error: "Este correo ya está asignado a otro trabajador." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const aplicarExclusionTrabajadorActual = (query: any) => {
+      if (id_usuario) {
+        return query.neq("id_usuario", id_usuario);
+      }
+
+      return query.neq("rut", routeRut);
+    };
+
+    if (cargo === "Jefe de tienda" && tiendas_id_tienda) {
+      let queryJefe = supabase
+        .from("usuario")
+        .select("id_usuario, nombre, apellido")
+        .eq("tiendas_id_tienda", tiendas_id_tienda)
+        .eq("cargo", "Jefe de tienda")
+        .eq("activo", "S")
+        .eq("eliminado", false);
+
+      queryJefe = aplicarExclusionTrabajadorActual(queryJefe);
+
+      const { data: jefeExistente, error: jefeError } =
+        await queryJefe.maybeSingle();
+
+      if (jefeError) {
+        return NextResponse.json(
+          { error: jefeError.message },
+          { status: 400 }
+        );
+      }
+
+      if (jefeExistente) {
+        return NextResponse.json(
+          {
+            error: `Esta tienda ya tiene un jefe asignado: ${jefeExistente.nombre} ${jefeExistente.apellido}.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     let query = supabase.from("usuario").update(updatePayload);
 
