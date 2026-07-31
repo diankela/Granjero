@@ -64,6 +64,12 @@ type TareaEnvasadoDashboard = {
   finalizado_en: string | null;
 };
 
+type PedidoDashboard = {
+  grupo_pedido_id: string;
+  tienda: string;
+  estado: string;
+};
+
 export default function DashboardPage() {
 
   const router = useRouter();
@@ -73,9 +79,25 @@ export default function DashboardPage() {
   const [tareasEnvasado, setTareasEnvasado] = useState<
     TareaEnvasadoDashboard[]
   >([]);
-
+  const [pedidosDashboard, setPedidosDashboard] = useState<PedidoDashboard[]>([]);
   const [cargandoTareasEnvasado, setCargandoTareasEnvasado] = useState(false);
 
+
+  async function cargarPedidosDashboard() {
+    try {
+      const response = await fetch("/api/pedidos-reposicion/grupos");
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Error al cargar pedidos.");
+      }
+
+      setPedidosDashboard(result.data || []);
+    } catch (error) {
+      console.error(error);
+      setPedidosDashboard([]);
+    }
+  }
   useEffect(() => {
     async function cargarUsuario() {
       try {
@@ -121,6 +143,7 @@ export default function DashboardPage() {
         }
         setUsuario(result.data);
         cargarTareasEnvasadoDashboard();
+        cargarPedidosDashboard();
       } catch (error) {
         console.error(error);
         router.push("/login");
@@ -180,13 +203,132 @@ export default function DashboardPage() {
     return estado.replaceAll("_", " ");
   }
 
+  function obtenerColorAvanceEnvasador(avance: number) {
+    if (avance <= 25) {
+      return "bg-red-500";
+    }
 
+    if (avance <= 75) {
+      return "bg-orange-500";
+    }
 
+    if (avance <= 98) {
+      return "bg-yellow-400";
+    }
 
+    return "bg-emerald-500";
+  }
 
+  function obtenerIndicadoresEnvasadores() {
+    const resumen = new Map<
+      string,
+      {
+        trabajador: string;
+        cantidad_objetivo: number;
+        cantidad_completada: number;
+        tareas: number;
+      }
+    >();
 
+    tareasEnvasado.forEach((tarea) => {
+      const trabajador = tarea.trabajador || "Sin asignar";
 
+      const actual = resumen.get(trabajador) || {
+        trabajador,
+        cantidad_objetivo: 0,
+        cantidad_completada: 0,
+        tareas: 0,
+      };
 
+      actual.cantidad_objetivo += Number(tarea.cantidad_objetivo || 0);
+      actual.cantidad_completada += Number(tarea.cantidad_completada || 0);
+      actual.tareas += 1;
+
+      resumen.set(trabajador, actual);
+    });
+
+    return Array.from(resumen.values()).map((item) => {
+      const avance =
+        item.cantidad_objetivo > 0
+          ? Math.round((item.cantidad_completada / item.cantidad_objetivo) * 100)
+          : 0;
+
+      return {
+        ...item,
+        avance: Math.min(avance, 100),
+      };
+    });
+  }
+
+  const indicadoresEnvasadores = obtenerIndicadoresEnvasadores();
+
+  function obtenerColorEstadoPedidos(estado: string) {
+    if (estado === "NO_REVISADO") {
+      return "bg-red-100 text-red-700";
+    }
+
+    if (estado === "EN_PREPARACION") {
+      return "bg-orange-100 text-orange-700";
+    }
+
+    if (estado === "REVISADA") {
+      return "bg-emerald-100 text-emerald-700";
+    }
+
+    return "bg-gray-100 text-gray-600";
+  }
+
+  function obtenerResumenPedidosTiendas() {
+    const tiendas = ["La Concepción", "Bilbao", "Providencia"];
+
+    return tiendas.map((tienda) => {
+      const pedidosTienda = pedidosDashboard.filter(
+        (pedido) => pedido.tienda === tienda
+      );
+
+      const noRevisados = pedidosTienda.filter(
+        (pedido) => pedido.estado === "NO_REVISADO"
+      ).length;
+
+      const enPreparacion = pedidosTienda.filter(
+        (pedido) => pedido.estado === "EN_PREPARACION"
+      ).length;
+
+      const revisados = pedidosTienda.filter(
+        (pedido) =>
+          pedido.estado !== "NO_REVISADO" &&
+          pedido.estado !== "EN_PREPARACION"
+      ).length;
+
+      let estadoPrincipal = "SIN_PEDIDOS";
+
+      if (enPreparacion > 0) {
+        estadoPrincipal = "EN_PREPARACION";
+      } else if (noRevisados > 0) {
+        estadoPrincipal = "NO_REVISADO";
+      } else if (revisados > 0) {
+        estadoPrincipal = "REVISADA";
+      }
+
+      return {
+        tienda,
+        total: pedidosTienda.length,
+        noRevisados,
+        enPreparacion,
+        revisados,
+        estadoPrincipal,
+      };
+    });
+  }
+
+  function formatearEstadoResumenPedidos(estado: string) {
+    if (estado === "NO_REVISADO") return "No revisada";
+    if (estado === "EN_PREPARACION") return "En preparación";
+    if (estado === "REVISADA") return "Revisada";
+    return "Sin pedidos";
+  }
+
+  const resumenPedidosTiendas = obtenerResumenPedidosTiendas();
 
 
 
@@ -253,10 +395,187 @@ export default function DashboardPage() {
           </p>
         </section>
 
+        {/* ___________________________________________________________________________________________________________________________________ */}
+        {/* ________________________________________INDICADORES DE ENVASADO____________________________________________________________________________________ */}
+        <div className="mb-6 grid gap-6 lg:grid-cols-2">
+          <section className="w-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">
+                  Indicadores de envasado
+                </p>
+
+                <h2 className="mt-1 text-xl font-bold text-gray-800">
+                  Avance por envasador
+                </h2>
+
+                <p className="mt-1 text-xs text-gray-600">
+                  Avance según unidades completadas versus objetivo asignado.
+                </p>
+              </div>
+            </div>
+
+            {indicadoresEnvasadores.length === 0 ? (
+              <p className="rounded-xl bg-gray-50 px-4 py-4 text-center text-sm text-gray-500">
+                Todavía no hay tareas de envasado asignadas.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <div className="flex min-h-[210px] min-w-[320px] gap-3">
+                  <div className="flex h-40 flex-col justify-between py-1 text-[10px] font-semibold text-gray-500">
+                    <span>100%</span>
+                    <span>75%</span>
+                    <span>50%</span>
+                    <span>25%</span>
+                    <span>0%</span>
+                  </div>
+
+                  <div className="relative flex flex-1 items-end justify-around gap-3 border-l border-b border-gray-200 px-3 pb-7">
+                    <div className="absolute inset-x-0 top-0 border-t border-dashed border-gray-200" />
+                    <div className="absolute inset-x-0 top-1/4 border-t border-dashed border-gray-200" />
+                    <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-gray-200" />
+                    <div className="absolute inset-x-0 top-3/4 border-t border-dashed border-gray-200" />
+
+                    {indicadoresEnvasadores.map((item) => (
+                      <div
+                        key={item.trabajador}
+                        className="relative z-10 flex h-40 min-w-[58px] flex-col items-center justify-end"
+                      >
+                        <p className="mb-1 text-xs font-bold text-gray-800">
+                          {item.avance}%
+                        </p>
+
+                        <div className="flex h-32 w-9 items-end rounded-t-lg bg-gray-100">
+                          <div
+                            className={`w-full rounded-t-lg transition-all ${obtenerColorAvanceEnvasador(
+                              item.avance
+                            )}`}
+                            style={{
+                              height: `${item.avance}%`,
+                            }}
+                          />
+                        </div>
+
+                        <div className="absolute -bottom-7 w-24 text-center">
+                          <p className="truncate text-[11px] font-semibold text-gray-700">
+                            {item.trabajador}
+                          </p>
+                          <p className="text-[10px] text-gray-500">
+                            {item.tareas} tarea{item.tareas === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-8 flex flex-wrap gap-3 text-[11px] font-semibold text-gray-600">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                    0% - 25%
+                  </span>
+
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-orange-500" />
+                    26% - 75%
+                  </span>
+
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
+                    76% - 98%
+                  </span>
+
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                    99% - 100%
+                  </span>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* _________________________________________________________________________________________________________________________________ */}
+          {/* ________________________________________INDICADORES DE PEDIDOS____________________________________________________________________________________ */}
+
+          <section className="w-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">
+                Pedidos tiendas
+              </p>
+
+              <h2 className="mt-1 text-xl font-bold text-gray-800">
+                Actividad por tienda
+              </h2>
+
+              <p className="mt-1 text-xs text-gray-600">
+                Estado actual de los pedidos enviados por cada local.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {resumenPedidosTiendas.map((item) => (
+                <div
+                  key={item.tienda}
+                  className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+                >
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">
+                        {item.tienda}
+                      </p>
+
+                      <p className="mt-1 text-xs text-gray-500">
+                        {item.total} pedido{item.total === 1 ? "" : "s"} registrado
+                        {item.total === 1 ? "" : "s"}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`rounded-full px-3 py-1 text-[11px] font-bold ${obtenerColorEstadoPedidos(
+                        item.estadoPrincipal
+                      )}`}
+                    >
+                      {formatearEstadoResumenPedidos(item.estadoPrincipal)}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-lg bg-white px-2 py-2">
+                      <p className="text-lg font-bold text-red-600">
+                        {item.noRevisados}
+                      </p>
+                      <p className="text-[10px] font-semibold uppercase text-gray-500">
+                        No revisados
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg bg-white px-2 py-2">
+                      <p className="text-lg font-bold text-orange-500">
+                        {item.enPreparacion}
+                      </p>
+                      <p className="text-[10px] font-semibold uppercase text-gray-500">
+                        Preparación
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg bg-white px-2 py-2">
+                      <p className="text-lg font-bold text-emerald-600">
+                        {item.revisados}
+                      </p>
+                      <p className="text-[10px] font-semibold uppercase text-gray-500">
+                        Revisados
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
         {/* _________________________________________________________________________________________________________________________________ */}
         {/* ________________________________________TAREAS DE ENVASADO____________________________________________________________________________________ */}
 
-        <section className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        {/* <section className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">
@@ -367,7 +686,7 @@ export default function DashboardPage() {
               </table>
             </div>
           )}
-        </section>
+        </section> */}
 
 
 
